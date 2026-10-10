@@ -90,6 +90,15 @@ class Location(BaseModel):
     environment: str
 
 
+class ReplayEvent(BaseModel):
+    source: Source
+    event_id: str
+    mission_id: str
+    timestamp: datetime | None = None
+    event_type: str
+    details: dict[str, str | float | int | bool | None] = Field(default_factory=dict)
+
+
 class CanonicalBatch(BaseModel):
     missions: list[Mission] = Field(default_factory=list)
     actions: list[Action] = Field(default_factory=list)
@@ -97,3 +106,4 @@ class CanonicalBatch(BaseModel):
     anomaly_claims: list[AnomalyClaim] = Field(default_factory=list)
     assets: list[Asset] = Field(default_factory=list)
     locations: list[Location] = Field(default_factory=list)
+    events: list[ReplayEvent] = Field(default_factory=list)

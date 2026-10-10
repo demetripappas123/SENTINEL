@@ -12,6 +12,7 @@ export * from "./theme";
 export * from "./repository";
 export * from "./inspection-selectors";
 export * from "./queue";
+export * from "./presentation";
 export const dataset: InspectionDataset = challenge;
 export const emptyDataset: InspectionDataset = {
   missions: [],

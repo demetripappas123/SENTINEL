@@ -22,6 +22,7 @@ interface InspectionState {
   loading: boolean;
   error: string | null;
   reviewError: string | null;
+  reviewStorageReady: boolean;
   saving: boolean;
   range: DateRange;
 }
@@ -40,6 +41,7 @@ const initialState: InspectionState = {
   loading: true,
   error: null,
   reviewError: null,
+  reviewStorageReady: false,
   saving: false,
   range: null,
 };
@@ -98,12 +100,13 @@ export function InspectionProvider({
           (reviews) => {
             if (!isCurrent() || revision !== reviewRevision.current) return;
             reviewsReady.current = true;
-            update({ reviews, reviewError: null });
+            update({ reviews, reviewError: null, reviewStorageReady: true });
           },
           () => {
             if (!isCurrent()) return;
             reviewsReady.current = false;
             update({
+              reviewStorageReady: false,
               reviewError:
                 "Could not load saved reviews. Retry or reset local reviews.",
             });
@@ -159,7 +162,7 @@ export function InspectionProvider({
         if (isCurrent()) {
           reviewRevision.current += 1;
           reviewsReady.current = true;
-          update({ reviews, reviewError: null });
+          update({ reviews, reviewError: null, reviewStorageReady: true });
         }
       } catch (error) {
         if (isCurrent())

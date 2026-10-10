@@ -5,6 +5,8 @@ import {
   selectActionFindings,
   selectActionReadings,
   selectMissionActions,
+  selectFindingSummary,
+  selectDailyMetrics,
 } from "./inspection-selectors";
 
 function overnightDataset(): InspectionDataset {
@@ -154,6 +156,43 @@ describe("date-scoped inspection data", () => {
   });
 });
 
+describe("dashboard chart aggregation", () => {
+  it("counts all findings by severity and type, independently of acknowledgment", () => {
+    const summary = selectFindingSummary(dataset);
+    expect(summary.total).toBe(40);
+    expect(summary.severities.map((s) => s.count)).toEqual([4, 11, 14, 11]);
+    expect(summary.types.reduce((sum, group) => sum + group.count, 0)).toBe(40);
+    expect(summary.types.map((group) => group.share)).toEqual([30, 15, 15, 40]);
+  });
+  it("uses mission start dates for overnight action results", () => {
+    const data = overnightDataset();
+    data.actions.forEach((action) => {
+      action.status = "SUCCESS";
+    });
+    expect(selectDailyMetrics(data)[0]).toMatchObject({
+      date: "2026-09-01",
+      runs: 1,
+      actionSuccess: 100,
+      completion: 100,
+    });
+    expect(selectDailyMetrics(data)[1]).toMatchObject({
+      date: "2026-09-02",
+      runs: 1,
+      actionSuccess: 0,
+    });
+  });
+  it("supports an empty date scope without NaN values", () => {
+    const empty = scopeDataset(dataset, {
+      start: "2027-01-01",
+      end: "2027-01-01",
+    });
+    expect(selectDailyMetrics(empty)).toEqual([]);
+    expect(
+      selectFindingSummary(empty).types.map((group) => group.share),
+    ).toEqual([0, 0, 0, 0]);
+  });
+});
+
 describe("injected evidence selectors", () => {
   it("uses the supplied records and sorts actions without mutating them", () => {
     const data = overnightDataset();
@@ -180,4 +219,31 @@ describe("injected evidence selectors", () => {
     expect(selectActionFindings(data, "missing")).toEqual([]);
     expect(selectActionReadings(data, "missing")).toEqual([]);
   });
+});
+
+it("aggregates recorded duration by mission start date for the duration sparkline", () => {
+  const data = {
+    ...dataset,
+    missions: [
+      {
+        ...dataset.missions[0],
+        start_time: "2026-09-01T23:00:00",
+        duration_min: 10,
+      },
+      {
+        ...dataset.missions[1],
+        start_time: "2026-09-01T04:00:00",
+        duration_min: 30,
+      },
+      {
+        ...dataset.missions[2],
+        start_time: "2026-09-02T04:00:00",
+        duration_min: 40,
+      },
+    ],
+  };
+  expect(selectDailyMetrics(data)).toMatchObject([
+    { date: "2026-09-01", averageDuration: 20 },
+    { date: "2026-09-02", averageDuration: 40 },
+  ]);
 });

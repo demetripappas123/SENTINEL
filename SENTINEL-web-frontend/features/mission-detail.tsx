@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   actionFindings,
   humanize,
+  formatFindingDescription,
   locationName,
   missionActions,
   missionLabel,
@@ -219,7 +220,9 @@ export function MissionDetail({ missionId }: { missionId: string }) {
                 <span>
                   <strong>{humanize(f.anomaly_type)}</strong>
                   <br />
-                  <small className="muted">{f.description}</small>
+                  <small className="muted">
+                    {formatFindingDescription(f.description)}
+                  </small>
                 </span>
                 <Tag tone={severityTone(f.severity)}>
                   {humanize(f.severity)}

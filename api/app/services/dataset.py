@@ -9,6 +9,7 @@ from app.schemas.canonical import (
     Location,
     Mission,
     Reading,
+    ReplayEvent,
     Source,
 )
 from app.schemas.dataset import (
@@ -29,6 +30,7 @@ _TABLES = {
     "anomaly_claims": ("anomaly_claims", AnomalyClaim),
     "assets": ("assets", Asset),
     "locations": ("locations", Location),
+    "events": ("replay_events", ReplayEvent),
 }
 
 

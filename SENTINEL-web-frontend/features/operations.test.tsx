@@ -96,8 +96,12 @@ describe("dashboard workflows", () => {
     expect(screen.queryByText("43")).not.toBeInTheDocument();
     expect(screen.getByText("Actions").parentElement).toHaveTextContent("9");
     expect(screen.getByText("Findings").parentElement).toHaveTextContent("1");
-    expect(screen.queryByRole("button", { name: /Signal degradation.*PANEL-203/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^WP05/ })).toHaveTextContent("1 failed");
+    expect(
+      screen.queryByRole("button", { name: /Signal degradation.*PANEL-203/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^WP05/ })).toHaveTextContent(
+      "1 failed",
+    );
   });
   it("resets replay to the selected configuration's recorded events", async () => {
     renderStored(<Replay />);
@@ -109,16 +113,26 @@ describe("dashboard workflows", () => {
     expect(screen.getByText("1 / 104")).toBeInTheDocument();
     expect(screen.getByRole("slider")).toHaveAttribute("max", "103");
     expect(screen.getByRole("slider")).toHaveValue("0");
-    expect(screen.getByRole("button", { name: "Play replay" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Play replay" }),
+    ).toBeInTheDocument();
   });
   it("shows only findings linked to the selected mission action", async () => {
     renderStored(<MissionDetail missionId="M015" />);
     await userEvent.click(screen.getByRole("button", { name: /A0141/ }));
-    const evidence = screen.getByRole("complementary", { name: "Action evidence" });
-    expect(within(evidence).getByText("Signal degradation")).toBeInTheDocument();
-    expect(within(evidence).getByText("Synthetic signal degradation detected.")).toBeInTheDocument();
+    const evidence = screen.getByRole("complementary", {
+      name: "Action evidence",
+    });
+    expect(
+      within(evidence).getByText("Signal degradation"),
+    ).toBeInTheDocument();
+    expect(
+      within(evidence).getByText("Signal degradation detected."),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /A0146/ }));
-    expect(within(evidence).queryByText("Signal degradation")).not.toBeInTheDocument();
+    expect(
+      within(evidence).queryByText("Signal degradation"),
+    ).not.toBeInTheDocument();
   });
   it("scrubs recorded events and identifies the partial replay", async () => {
     renderStored(<Replay />);
