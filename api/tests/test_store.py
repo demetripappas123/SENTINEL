@@ -62,18 +62,18 @@ def test_persist_upserts_replay_events_after_their_missions():
     assert details.obj == {"scenario": "BASELINE", "battery_pct": 82}
 
 
-def test_get_dataset_reads_replay_events_for_the_source(monkeypatch):
-    row = _event().model_dump() | {"source": "kit"}
-    conn = FakeConnection({"replay_events": [row]})
+def test_get_dataset_derives_replay_from_source_missions(monkeypatch):
+    mission = _mission().model_copy(update={"start_time": STARTED})
+    conn = FakeConnection({"missions": [mission.model_dump() | {"source": "kit"}]})
     monkeypatch.setattr(dataset_service, "connect", lambda: conn)
     dataset = dataset_service.get_dataset(Source.kit)
-    assert ("SELECT * FROM sentinel.replay_events WHERE source = %s", ("kit",)) in conn.reads
+    assert all(params == ("kit",) for _, params in conn.reads)
     assert dataset.model_dump()["events"] == [
         {
-            "event_id": "E00001",
+            "event_id": "M001:started",
             "mission_id": "M001",
             "timestamp": "2026-09-01T18:00:00",
             "event_type": "MISSION_STARTED",
-            "details": {"scenario": "BASELINE", "battery_pct": 82},
+            "details": {"scenario": None, "configuration_version": None, "battery_pct": None},
         }
     ]

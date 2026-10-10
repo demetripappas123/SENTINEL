@@ -1,3 +1,4 @@
+import { formatLabel } from "./presentation";
 import challenge from "./data/challenge.json";
 import type {
   Configuration,
@@ -117,11 +118,7 @@ export function missionLabel(mission: {
     return mission.mission_status;
   return mission.start_time ? "IN_PROGRESS" : "PENDING";
 }
-export const humanize = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/_/g, " ")
-    .replace(/^./, (c) => c.toUpperCase());
+export const humanize = formatLabel;
 export const pending = (value: string | number | null | undefined) =>
   value == null || value === "" ? "Pending" : String(value);
 export const shortTime = (value: string | null) =>
@@ -131,7 +128,9 @@ export const missionActions = (data: InspectionDataset, missionId: string) =>
     .filter((a) => a.mission_id === missionId)
     .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
 export const actionFindings = (data: InspectionDataset, actionId: string) =>
-  getFindings(data, { status: "all" }).filter((finding) => finding.action_id === actionId);
+  getFindings(data, { status: "all" }).filter(
+    (finding) => finding.action_id === actionId,
+  );
 export const assetName = (data: InspectionDataset, id: string | null) =>
   id ? data.assets.find((a) => a.asset_id === id)?.asset_name || id : "Pending";
 export const locationName = (data: InspectionDataset, id: string | null) =>

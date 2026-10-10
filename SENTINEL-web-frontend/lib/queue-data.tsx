@@ -1,16 +1,16 @@
 "use client";
-
+import { createContext, useContext, type ReactNode } from "react";
+import { isQueueItem, type QueueItem } from "@sentinel/core/api";
 import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import type { QueueItem } from "@sentinel/core/api";
-
-const QueueContext = createContext<QueueItem[]>([]);
-
+  readyState,
+  useApiResource,
+  type RequestState,
+} from "./use-api-resource";
+const emptyQueue: QueueItem[] = [];
+const QueueContext = createContext<QueueItem[]>(emptyQueue);
+const QueueStateContext = createContext<RequestState>(readyState);
+const isQueue = (value: unknown): value is QueueItem[] =>
+  Array.isArray(value) && value.every(isQueueItem);
 export function QueueProvider({
   initial,
   children,
@@ -18,28 +18,14 @@ export function QueueProvider({
   initial?: QueueItem[];
   children: ReactNode;
 }) {
-  const [items, setItems] = useState<QueueItem[]>(initial ?? []);
-  useEffect(() => {
-    if (initial) return;
-    let cancelled = false;
-    fetch("/api/queue")
-      .then((response) => {
-        if (!response.ok) throw new Error("unavailable");
-        return response.json();
-      })
-      .then((value: QueueItem[]) => {
-        if (!cancelled) setItems(value);
-      })
-      .catch(() => {
-        if (!cancelled) setItems([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [initial]);
-  return <QueueContext.Provider value={items}>{children}</QueueContext.Provider>;
+  const resource = useApiResource("/api/queue", initial, emptyQueue, isQueue);
+  return (
+    <QueueStateContext.Provider value={resource}>
+      <QueueContext.Provider value={resource.data}>
+        {children}
+      </QueueContext.Provider>
+    </QueueStateContext.Provider>
+  );
 }
-
-export function useQueue(): QueueItem[] {
-  return useContext(QueueContext);
-}
+export const useQueue = () => useContext(QueueContext);
+export const useQueueState = () => useContext(QueueStateContext);

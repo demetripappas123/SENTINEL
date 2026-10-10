@@ -247,3 +247,25 @@ it("aggregates recorded duration by mission start date for the duration sparklin
     { date: "2026-09-02", averageDuration: 40 },
   ]);
 });
+
+it("handles Orbit missions with missing timestamps and averages only recorded durations", () => {
+  const data = {
+    ...dataset,
+    missions: [
+      { ...dataset.missions[0], start_time: null, duration_min: null },
+      {
+        ...dataset.missions[1],
+        start_time: "2026-09-01T10:00:00",
+        duration_min: null,
+      },
+      {
+        ...dataset.missions[2],
+        start_time: "2026-09-01T12:00:00",
+        duration_min: 12,
+      },
+    ],
+  };
+  expect(selectDailyMetrics(data)).toMatchObject([
+    { date: "2026-09-01", runs: 2, averageDuration: 12 },
+  ]);
+});

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useInspectionData } from "../lib/inspection-data";
+import { placeName } from "../lib/operator-copy";
 
 const points: Record<string, [number, number]> = {
   WP01: [8.9, 73.9],
@@ -61,7 +62,7 @@ export function FacilityMap({
     moved: boolean;
   } | null>(null);
   const suppressClick = useRef(false);
-  const [paint, setPaint] = useState<View>(view.current);
+  const [paint, setPaint] = useState<View>({ scale: 1.12, x: 0, y: 0 });
 
   function commit(next: View) {
     const node = frame.current;
@@ -143,25 +144,25 @@ export function FacilityMap({
           draggable={false}
           unoptimized
         />
-        {data.locations.map((location) => (
-          <button
-            key={location.location_id}
-            className={
-              "map-hotspot " +
-              (selected === location.location_id ? "active" : "")
-            }
-            style={{
-              left: points[location.location_id][0] + "%",
-              top: points[location.location_id][1] + "%",
-            }}
-            onClick={() => onSelect(location.location_id)}
-            aria-label={
-              "Select " + location.location_id + ", " + location.location_name
-            }
-            aria-pressed={selected === location.location_id}
-            title={location.location_id + " · " + location.location_name}
-          />
-        ))}
+        {data.locations
+          .filter((location) => points[location.location_id])
+          .map((location) => (
+            <button
+              key={location.location_id}
+              className={
+                "map-hotspot " +
+                (selected === location.location_id ? "active" : "")
+              }
+              style={{
+                left: points[location.location_id][0] + "%",
+                top: points[location.location_id][1] + "%",
+              }}
+              onClick={() => onSelect(location.location_id)}
+              aria-label={"Select " + placeName(data, location.location_id)}
+              aria-pressed={selected === location.location_id}
+              title={placeName(data, location.location_id)}
+            />
+          ))}
       </div>
       <div className="map-zoom">
         <button

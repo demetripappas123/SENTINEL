@@ -1,17 +1,14 @@
 "use client";
-
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { emptyDataset, type InspectionDataset } from "@sentinel/core";
-
+import { isInspectionDataset } from "@sentinel/core/api";
+import {
+  readyState,
+  useApiResource,
+  type RequestState,
+} from "./use-api-resource";
 const InspectionDataContext = createContext<InspectionDataset>(emptyDataset);
-const InspectionReadyContext = createContext(true);
-
+const InspectionStateContext = createContext<RequestState>(readyState);
 export function InspectionDataProvider({
   initial,
   children,
@@ -19,42 +16,20 @@ export function InspectionDataProvider({
   initial?: InspectionDataset;
   children: ReactNode;
 }) {
-  const [data, setData] = useState<InspectionDataset>(initial ?? emptyDataset);
-  const [ready, setReady] = useState(initial !== undefined);
-  useEffect(() => {
-    if (initial) return;
-    let cancelled = false;
-    fetch("/api/dataset")
-      .then((response) => {
-        if (!response.ok) throw new Error("unavailable");
-        return response.json();
-      })
-      .then((value: InspectionDataset) => {
-        if (!cancelled) setData(value);
-      })
-      .catch(() => {
-        if (!cancelled) setData(emptyDataset);
-      })
-      .finally(() => {
-        if (!cancelled) setReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [initial]);
+  const resource = useApiResource(
+    "/api/dataset",
+    initial,
+    emptyDataset,
+    isInspectionDataset,
+  );
   return (
-    <InspectionReadyContext.Provider value={ready}>
-      <InspectionDataContext.Provider value={data}>
+    <InspectionStateContext.Provider value={resource}>
+      <InspectionDataContext.Provider value={resource.data}>
         {children}
       </InspectionDataContext.Provider>
-    </InspectionReadyContext.Provider>
+    </InspectionStateContext.Provider>
   );
 }
-
-export function useInspectionData(): InspectionDataset {
-  return useContext(InspectionDataContext);
-}
-
-export function useInspectionReady(): boolean {
-  return useContext(InspectionReadyContext);
-}
+export const useInspectionData = () => useContext(InspectionDataContext);
+export const useInspectionState = () => useContext(InspectionStateContext);
+export const useInspectionReady = () => useInspectionState().status === "ready";

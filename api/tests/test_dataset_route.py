@@ -54,3 +54,29 @@ def test_expo_web_origin_may_call_the_api(served):
     )
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:8081"
+
+
+def test_orbit_route_preserves_partial_records_for_the_web_dashboard(monkeypatch):
+    from app.mappers.orbit import map_orbit
+    from app.services.dataset import to_dataset
+
+    batch = map_orbit({
+        "uuid": "orbit-run-1",
+        "missionName": "Boiler inspection",
+        "startTime": "2026-10-10T12:00:00Z",
+        "status": "IN_PROGRESS",
+        "runEvents": [{
+            "uuid": "orbit-action-1", "runUuid": "orbit-run-1",
+            "actionName": "GAUGE_READING", "actionStatus": "FAILED",
+            "failureType": "SENSOR_TIMEOUT", "time": "2026-10-10T12:01:00Z",
+        }],
+    })
+    monkeypatch.setattr(dataset_router, "get_dataset", lambda source: to_dataset(batch))
+    response = client.get("/dataset?source=orbit")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["missions"][0]["end_time"] is None
+    assert data["actions"][0]["failure_type"] == "SENSOR_TIMEOUT"
+    assert data["actions"][0]["timestamp"] == "2026-10-10T12:01:00"
+    assert [event["event_type"] for event in data["events"]] == ["MISSION_STARTED", "ACTION_STARTED", "ACTION_FAILED"]
+    assert data["locations"] == []

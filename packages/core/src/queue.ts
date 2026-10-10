@@ -1,3 +1,4 @@
+import { describeQueueItem, formatLabel } from "./presentation";
 import type { QueueItem } from "./api/client";
 import type { Configuration } from "./types";
 
@@ -24,12 +25,26 @@ export function selectQueue(
   const needle = query.trim().toLowerCase();
   return items.filter((item) => {
     if (missionId && item.mission_id !== missionId) return false;
-    if (configuration !== "ALL" && scenarios?.get(item.mission_id) !== configuration)
+    if (
+      configuration !== "ALL" &&
+      scenarios?.get(item.mission_id) !== configuration
+    )
       return false;
     if (status === "required" && reviewed.has(item.id)) return false;
     if (status === "reviewed" && !reviewed.has(item.id)) return false;
     if (!needle) return true;
-    return [item.verdict, item.cause, item.explanation, item.mission_id, item.action_id, item.asset_id, item.location_id]
+    return [
+      formatLabel(item.verdict),
+      formatLabel(item.cause),
+      describeQueueItem(item).summary,
+      item.verdict,
+      item.cause,
+      item.explanation,
+      item.mission_id,
+      item.action_id,
+      item.asset_id,
+      item.location_id,
+    ]
       .join(" ")
       .toLowerCase()
       .includes(needle);
