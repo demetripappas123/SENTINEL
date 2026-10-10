@@ -72,6 +72,7 @@
   --bad: oklch(0.55 0.21 27);
   --chart-red: oklch(0.57 0.22 27);
   --chart-yellow: oklch(0.88 0.19 98);
+  --chart-orange: oklch(0.72 0.17 55);
   --chart-green: oklch(0.62 0.17 145);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -105,6 +106,7 @@ html,
 body {
   margin: 0;
   height: 100%;
+  overflow: hidden;
   background: var(--background);
   color: var(--foreground);
 }
@@ -853,6 +855,225 @@ small,
 }
 .interpretation ul {
   padding-left: 18px;
+}
+.compare-board {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.compare-board-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.compare-board-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.compare-board-head span,
+.compare-chart header span,
+.compare-stat p,
+.compare-kpi span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.compare-kpis,
+.compare-charts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.compare-kpi,
+.compare-chart {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  min-width: 0;
+}
+.compare-kpi {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 16px 16px 18px;
+}
+.compare-kpi strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+  line-height: 1;
+}
+.compare-kpi small,
+.compare-stat small {
+  margin-left: 1px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+.compare-kpi span {
+  display: block;
+  margin-top: 8px;
+}
+.compare-spark {
+  width: 96px;
+  height: 40px;
+  flex: none;
+}
+.compare-chart {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 12px;
+  min-height: 340px;
+}
+.compare-chart header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.compare-chart h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.compare-chart header span {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  line-height: 1.2;
+}
+.compare-stat {
+  margin-top: 14px;
+}
+.compare-stat strong {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.7px;
+  line-height: 1;
+}
+.compare-delta {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 6px;
+  vertical-align: 3px;
+}
+.compare-delta.better {
+  color: var(--good);
+  background: color-mix(in oklch, var(--good) 14%, transparent);
+}
+.compare-delta.worse {
+  color: var(--bad);
+  background: color-mix(in oklch, var(--bad) 12%, transparent);
+}
+.compare-delta.flat {
+  color: var(--muted-foreground);
+  background: var(--secondary);
+}
+.compare-stat p {
+  margin: 6px 0 0;
+}
+.compare-plot {
+  width: 100%;
+  height: 168px;
+  margin-top: auto;
+}
+.compare-plot line {
+  stroke: var(--border);
+  stroke-dasharray: 3 4;
+}
+.compare-plot text {
+  fill: var(--muted-foreground);
+  font-size: 10px;
+}
+.compare-plot .v1-line {
+  fill: none;
+  stroke: var(--chart-accent);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 4;
+}
+.compare-plot .v2-line {
+  fill: none;
+  stroke: var(--chart-green);
+  stroke-width: 2;
+}
+.compare-plot .v2-area {
+  fill: color-mix(in srgb, var(--chart-green) 16%, transparent);
+}
+.compare-donut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.compare-donut > div {
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.compare-donut > div span {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--card);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.compare-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.compare-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.compare-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+}
+.compare-legend i.dashed {
+  width: 12px;
+  height: 0;
+  border-radius: 0;
+  border-top: 1.5px dashed;
+  background: transparent;
+}
+.compare-legend b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .compare-charts {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 800px) {
+  .compare-kpis {
+    grid-template-columns: 1fr;
+  }
 }
 .diagram-list {
   padding: 16px;
@@ -1631,6 +1852,7 @@ dialog::backdrop {
   --bad: oklch(0.68 0.19 25);
   --chart-red: oklch(0.68 0.2 27);
   --chart-yellow: oklch(0.9 0.17 98);
+  --chart-orange: oklch(0.78 0.15 55);
   --chart-green: oklch(0.74 0.17 145);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);

@@ -65,7 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     "/replay": data.events.length,
   };
   return (
-    <div className="app-frame grid h-dvh grid-cols-[212px_minmax(0,1fr)] grid-rows-[52px_minmax(0,1fr)] bg-background text-foreground">
+    <div className="app-frame grid h-dvh grid-cols-[212px_minmax(0,1fr)] grid-rows-[52px_minmax(0,1fr)] overflow-hidden bg-background text-foreground">
       <header className="col-span-2 flex items-center gap-4 border-b px-5">
         <Link
           className="flex items-center gap-2 text-base font-semibold tracking-wide"
@@ -160,7 +160,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </p>
         </div>
       </aside>
-      <main id="main" className="overflow-auto p-6">
+      <main id="main" className="relative min-h-0 overflow-auto p-6">
         <DataBoundary requests={requests}>{children}</DataBoundary>
       </main>
     </div>
