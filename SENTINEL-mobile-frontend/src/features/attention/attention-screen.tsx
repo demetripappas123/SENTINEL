@@ -14,10 +14,16 @@ import {
   getMetrics,
   humanize,
   type FindingStatus,
-  type ThemeColors,
 } from "@sentinel/core";
-import { Badge, SegmentedControl } from "../../ui";
+import {
+  Badge,
+  FilterChip,
+  Panel,
+  SegmentedControl,
+  severityTone,
+} from "../../ui";
 import { Icon } from "../../design/icons";
+import { fonts, radii, type Theme } from "../../design/tokens";
 import { findingThumbnail } from "../../assets";
 import { useReducedMotion } from "../../design/motion";
 import {
@@ -30,17 +36,20 @@ import { MetricBand, SummaryCharts } from "./summary-charts";
 import { DateRangeSheet } from "./date-range-sheet";
 import { FiltersSheet } from "./filters-sheet";
 
+// Native chrome around a scrolled-into-view queue panel: app header, tab bar,
+// panel header and footer, and breathing room above and below.
+const QUEUE_CHROME = 52 + 58 + 46 + 52 + 32;
+
 export function AttentionScreen({
   colors,
   onInspect,
   onShowFailedMissions,
 }: {
-  colors: ThemeColors;
+  colors: Theme;
   onInspect: (id: string) => void;
   onShowFailedMissions: () => void;
 }) {
-  const { data, range, setRange, reviewedIds, scale, largeText } =
-    useScreenData();
+  const { data, range, setRange, reviewedIds, largeText } = useScreenData();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<FindingStatus>("required");
   const [severity, setSeverity] = useState<string | null>(null);
@@ -48,27 +57,13 @@ export function AttentionScreen({
     [typeLabel, setTypeLabel] = useState("");
   const [datesOpen, setDatesOpen] = useState(false),
     [filtersOpen, setFiltersOpen] = useState(false);
-  const [queueTop, setQueueTop] = useState(0);
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  // Reserve native chrome and the queue's heading/footer. Large text can
-  // scroll the outer screen without compressing its finding rows.
+  // Once scrolled into view, the queue panel fills the screen and scrolls
+  // its rows; large text keeps a fixed height and lets the page scroll.
   const listHeight = largeText
     ? 340
-    : Math.min(
-        240 * scale,
-        Math.max(
-          120,
-          height -
-            insets.top -
-            insets.bottom -
-            46 -
-            66 -
-            queueTop -
-            10 -
-            71 * scale,
-        ),
-      );
+    : Math.max(220, height - insets.top - insets.bottom - QUEUE_CHROME);
   const pending = getFindings(data, { reviewedIds });
   const critical = pending.filter((f) => f.severity === "CRITICAL").length;
   const findings = getFindings(data, { query, status, reviewedIds }).filter(
@@ -97,39 +92,49 @@ export function AttentionScreen({
     transition.start();
     return () => transition.stop();
   }, [resultIds, reducedMotion, listOpacity]);
-  const days = data.missions.map((m) => m.start_time.slice(0, 10)).sort();
+  const days = data.missions
+    .map((m) => (m.start_time ?? "").slice(0, 10))
+    .filter(Boolean)
+    .sort();
   const start = range?.start || days[0] || "",
     end = range?.end || days.at(-1) || "";
   const metrics = getMetrics(data, "ALL");
+  const filtered = !!severity || types.length > 0;
   return (
     <>
       <ScreenHeading
         title="Attention"
+        subtitle="Findings and inspection health"
         colors={colors}
-        scale={scale}
         trailing={
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Choose mission dates"
             onPress={() => setDatesOpen(true)}
             hitSlop={6}
-            style={{
+            style={({ pressed }) => ({
               flexDirection: "row",
               alignItems: "center",
-              gap: 7,
-              paddingHorizontal: 9,
-              minHeight: 28 * scale,
+              gap: 6,
+              paddingHorizontal: 10,
+              minHeight: 34,
               borderWidth: 1,
-              borderColor: colors.line,
-              borderRadius: 4,
-              backgroundColor: colors.surface,
-            }}
+              borderColor: colors.input,
+              borderRadius: radii.md,
+              backgroundColor: pressed ? colors.muted : colors.background,
+            })}
           >
-            <Icon name="calendar" size={13} color={colors.ink} />
-            <Text style={{ fontSize: 10 * scale, color: colors.muted }}>
+            <Icon name="calendar" size={14} color={colors.mutedForeground} />
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "500",
+                color: colors.foreground,
+              }}
+            >
               {displayDateRange(start, end)}
             </Text>
-            <Icon name="down" size={12} color={colors.muted} />
+            <Icon name="down" size={13} color={colors.mutedForeground} />
           </Pressable>
         }
       />
@@ -138,12 +143,46 @@ export function AttentionScreen({
         pending={pending.length}
         critical={critical}
         colors={colors}
-        scale={scale}
       />
+      {metrics.completedWithFailures > 0 && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Inspect completed missions with failed actions"
+          onPress={onShowFailedMissions}
+          style={({ pressed }) => ({
+            minHeight: 44,
+            marginBottom: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: pressed ? colors.muted : colors.card,
+            borderRadius: radii.xl,
+            paddingHorizontal: 12,
+            paddingVertical: 9,
+            gap: 9,
+          })}
+        >
+          <Icon name="attention" color={colors.foreground} size={16} />
+          <Text style={{ color: colors.foreground, fontSize: 12, flex: 1 }}>
+            <Text style={{ fontWeight: "600" }}>
+              {metrics.completedWithFailures} completed{" "}
+              {metrics.completedWithFailures === 1 ? "mission" : "missions"}
+            </Text>{" "}
+            {metrics.completedWithFailures === 1 ? "has" : "have"} failed
+            actions
+          </Text>
+          <Text
+            style={{ color: colors.primary, fontSize: 12, fontWeight: "500" }}
+          >
+            Inspect
+          </Text>
+          <Icon name="external" color={colors.primary} size={14} />
+        </Pressable>
+      )}
       <SummaryCharts
         data={data}
         colors={colors}
-        scale={scale}
         stacked={largeText}
         onSeverity={setSeverity}
         onTypes={(values, label) => {
@@ -151,77 +190,45 @@ export function AttentionScreen({
           setTypeLabel(label);
         }}
       />
-      {metrics.completedWithFailures > 0 && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Inspect completed missions with failed actions"
-          onPress={onShowFailedMissions}
-          hitSlop={7}
-          style={{
-            minHeight: 29 * scale,
-            marginBottom: 12 * scale,
-            flexDirection: "row",
-            alignItems: "center",
-            borderWidth: 1,
-            borderLeftWidth: 2,
-            borderColor: colors.line,
-            borderLeftColor: colors.amber,
-            backgroundColor: colors.surface,
-            borderRadius: 4,
-            paddingHorizontal: 10 * scale,
-            gap: 8,
-          }}
-        >
-          <Icon name="attention" color={colors.amber} size={16} />
-          <Text style={{ color: colors.ink, fontSize: 10.5 * scale, flex: 1 }}>
-            <Text style={{ fontWeight: "600" }}>
-              {metrics.completedWithFailures} completed missions
-            </Text>{" "}
-            have failed actions
-          </Text>
-          <Text style={{ color: colors.blue, fontSize: 11 * scale }}>
-            Inspect
-          </Text>
-          <Icon name="external" color={colors.blue} size={13} />
-        </Pressable>
-      )}
+      {/* Web `.queue-toolbar`: search plus status and filter controls. */}
       <View
         style={{
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: colors.surface,
+          backgroundColor: colors.card,
           borderWidth: 1,
-          borderColor: colors.line,
-          borderRadius: 4,
-          paddingHorizontal: 11 * scale,
-          gap: 10,
-          marginBottom: 4 * scale,
+          borderColor: colors.input,
+          borderRadius: radii.md,
+          paddingHorizontal: 10,
+          gap: 8,
+          marginBottom: 8,
         }}
       >
-        <Icon name="search" color={colors.ink} size={17} />
+        <Icon name="search" color={colors.mutedForeground} size={16} />
         <TextInput
           accessibilityLabel="Search findings"
-          placeholder="Asset or waypoint"
-          placeholderTextColor={colors.muted}
+          placeholder="Search asset or waypoint"
+          placeholderTextColor={colors.mutedForeground}
           value={query}
           onChangeText={setQuery}
           clearButtonMode="while-editing"
           autoCapitalize="none"
           autoCorrect={false}
           style={{
-            color: colors.ink,
-            fontSize: 12 * scale,
+            color: colors.foreground,
+            fontSize: 14,
             flex: 1,
-            minHeight: 34 * scale,
-            paddingVertical: 5,
+            minHeight: 40,
+            paddingVertical: 8,
           }}
         />
       </View>
       <View
         style={{
           flexDirection: "row",
-          gap: 11 * scale,
-          marginBottom: 6 * scale,
+          alignItems: "center",
+          gap: 8,
+          marginBottom: filtered ? 8 : 12,
         }}
       >
         <View style={{ flex: 1 }}>
@@ -240,261 +247,230 @@ export function AttentionScreen({
           accessibilityRole="button"
           accessibilityLabel="Finding filters"
           onPress={() => setFiltersOpen(true)}
-          hitSlop={6}
-          style={{
-            width: 31 * scale,
-            height: 31 * scale,
+          hitSlop={4}
+          style={({ pressed }) => ({
+            width: 44,
+            height: 44,
             borderWidth: 1,
-            borderColor: colors.line,
-            borderRadius: 4,
+            borderColor: filtered ? colors.brand : colors.input,
+            borderRadius: radii.md,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: colors.surface,
-          }}
+            backgroundColor: pressed ? colors.muted : colors.background,
+          })}
         >
-          <Icon name="filters" size={16} color={colors.blue} />
+          <Icon
+            name="filters"
+            size={17}
+            color={filtered ? colors.brand : colors.foreground}
+          />
         </Pressable>
       </View>
-      {(severity || types.length > 0) && (
+      {filtered && (
         <View
           style={{
             flexDirection: "row",
             gap: 8,
             flexWrap: "wrap",
-            marginBottom: 10,
+            marginBottom: 12,
           }}
         >
           {severity && (
-            <Pressable
-              accessibilityRole="button"
+            <FilterChip
+              label={humanize(severity)}
               accessibilityLabel={`Clear ${humanize(severity)} filter`}
+              colors={colors}
               onPress={() => setSeverity(null)}
-              style={{
-                padding: 8,
-                backgroundColor: colors.blueSoft,
-                borderRadius: 4,
-              }}
-            >
-              <Text style={{ color: colors.blue, fontSize: 11 }}>
-                {humanize(severity)} ×
-              </Text>
-            </Pressable>
+            />
           )}
           {!!types.length && (
-            <Pressable
-              accessibilityRole="button"
+            <FilterChip
+              label={typeLabel || "Type filter"}
               accessibilityLabel="Clear type filter"
+              colors={colors}
               onPress={() => setTypes([])}
-              style={{
-                padding: 8,
-                backgroundColor: colors.blueSoft,
-                borderRadius: 4,
-              }}
-            >
-              <Text style={{ color: colors.blue, fontSize: 11 }}>
-                {typeLabel || "Type filter"} ×
-              </Text>
-            </Pressable>
+            />
           )}
         </View>
       )}
-      <View
-        onLayout={({ nativeEvent }) => setQueueTop(nativeEvent.layout.y)}
-        style={{
-          borderWidth: 1,
-          borderColor: "#cce0f8",
-          borderRadius: 4,
-          backgroundColor: colors.surface,
-          overflow: "hidden",
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-            paddingHorizontal: 11 * scale,
-            minHeight: 35 * scale,
-            backgroundColor: colors.blueSoft,
-            borderBottomWidth: 1,
-            borderColor: "#cce0f8",
-          }}
-        >
-          <Icon name="attention" color={colors.ink} size={19} />
-          <Text
-            style={{
-              fontSize: 13 * scale,
-              fontWeight: "600",
-              color: colors.ink,
-              flex: 1,
-            }}
-          >
-            {status === "reviewed" ? "Reviewed findings" : "Attention"}
-          </Text>
+      <Panel
+        title={status === "reviewed" ? "Reviewed findings" : "Attention"}
+        icon="attention"
+        action={
           <Badge
             label={`${critical} critical`}
-            severity="CRITICAL"
+            tone="destructive"
             colors={colors}
           />
-          <Icon name="chevron" color={colors.muted} size={13} />
-        </View>
+        }
+        colors={colors}
+        style={{ marginBottom: 8 }}
+        footer={
+          <>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+              {pending.length} to review
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Review queue"
+              accessibilityState={{ disabled: queue.length === 0 }}
+              disabled={!queue.length}
+              onPress={() => queue[0] && onInspect(queue[0].anomaly_id)}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                minHeight: 36,
+                borderRadius: radii.md,
+                backgroundColor: colors.primary,
+                paddingHorizontal: 12,
+                opacity: !queue.length ? 0.5 : pressed ? 0.85 : 1,
+              })}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "500",
+                  color: colors.primaryForeground,
+                }}
+              >
+                Review queue
+              </Text>
+              <Icon name="arrow" color={colors.primaryForeground} size={15} />
+            </Pressable>
+          </>
+        }
+      >
         {!visible.length && (
-          <Text
-            style={{
-              color: colors.muted,
-              padding: 24,
-              textAlign: "center",
-              fontSize: 12,
-            }}
-          >
-            No matching findings
-          </Text>
+          <View style={{ padding: 24, alignItems: "center", gap: 4 }}>
+            <Text
+              style={{
+                color: colors.foreground,
+                fontSize: 14,
+                fontWeight: "500",
+              }}
+            >
+              No matching findings
+            </Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+              Try another filter.
+            </Text>
+          </View>
         )}
         <Animated.ScrollView
           nestedScrollEnabled
-          style={{
-            maxHeight: listHeight,
-            opacity: listOpacity,
-          }}
+          style={{ maxHeight: listHeight, opacity: listOpacity }}
           keyboardShouldPersistTaps="handled"
         >
-          {visible.map((f) => (
-            <Pressable
-              key={f.anomaly_id}
-              accessibilityRole="button"
-              accessibilityLabel={`Inspect ${humanize(f.anomaly_type)} ${f.asset_id}`}
-              onPress={() => onInspect(f.anomaly_id)}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                paddingVertical: 5 * scale,
-                paddingHorizontal: 11 * scale,
-                minHeight: 60 * scale,
-                gap: 14 * scale,
-                borderBottomWidth: 1,
-                borderColor: colors.line,
-                backgroundColor: pressed ? colors.raised : colors.surface,
-              })}
-            >
-              <Image
-                source={findingThumbnail(f.anomaly_type)}
-                accessibilityLabel={`Illustration for ${humanize(f.anomaly_type)}`}
-                style={{
-                  width: 57 * scale,
-                  height: 45 * scale,
-                  borderRadius: 2,
-                  alignSelf: "center",
-                }}
-                resizeMode="cover"
-              />
-              <View style={{ flex: 1, gap: 2 }}>
-                <View
+          {visible.map((f, index) => {
+            const reviewed = reviewedIds.includes(f.anomaly_id);
+            return (
+              <Pressable
+                key={f.anomaly_id}
+                accessibilityRole="button"
+                accessibilityLabel={`Inspect ${humanize(f.anomaly_type)} ${f.asset_id}`}
+                onPress={() => onInspect(f.anomaly_id)}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  gap: 12,
+                  borderTopWidth: index ? 1 : 0,
+                  borderColor: colors.border,
+                  backgroundColor: pressed ? colors.secondary : colors.card,
+                })}
+              >
+                <Image
+                  source={findingThumbnail(f.anomaly_type)}
+                  accessibilityLabel={`Illustration for ${humanize(f.anomaly_type)}`}
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
+                    width: 52,
+                    height: 44,
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: colors.border,
                   }}
-                >
-                  <Badge
-                    label={humanize(f.severity)}
-                    severity={f.severity}
-                    colors={colors}
-                  />
-                  <Text
+                  resizeMode="cover"
+                />
+                <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
+                  <View
                     style={{
-                      fontSize: 9 * scale,
-                      fontFamily: "Menlo",
-                      color: colors.muted,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
                     }}
                   >
-                    {f.anomaly_id}
-                  </Text>
-                </View>
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-                >
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "600",
+                        color: colors.foreground,
+                        flex: 1,
+                      }}
+                    >
+                      {humanize(f.anomaly_type)}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontFamily: fonts.mono,
+                        color: colors.mutedForeground,
+                      }}
+                    >
+                      {f.anomaly_id}
+                    </Text>
+                  </View>
                   <Text
                     numberOfLines={1}
+                    style={{ fontSize: 11, color: colors.mutedForeground }}
+                  >
+                    {data.assets.find((a) => a.asset_id === f.asset_id)
+                      ?.asset_name || f.asset_id}{" "}
+                    · {f.location_id}{" "}
+                    {
+                      data.locations.find(
+                        (l) => l.location_id === f.location_id,
+                      )?.location_name
+                    }{" "}
+                    · {displayTime(f.timestamp)}
+                  </Text>
+                  <View
                     style={{
-                      fontSize: 12.5 * scale,
-                      lineHeight: 14 * scale,
-                      fontWeight: "600",
-                      color: colors.ink,
-                      flex: 1,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      marginTop: 2,
                     }}
                   >
-                    {humanize(f.anomaly_type)}
-                  </Text>
-                  <Icon name="chevron" color={colors.muted} size={13} />
+                    <Badge
+                      label={humanize(f.severity)}
+                      tone={severityTone(f.severity)}
+                      colors={colors}
+                    />
+                    {reviewed && (
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 3,
+                        }}
+                      >
+                        <Icon name="check" color={colors.good} size={12} />
+                        <Text style={{ color: colors.good, fontSize: 11 }}>
+                          Reviewed
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    fontSize: 9.5 * scale,
-                    lineHeight: 12 * scale,
-                    color: colors.muted,
-                  }}
-                >
-                  {data.assets.find((a) => a.asset_id === f.asset_id)
-                    ?.asset_name || f.asset_id}{" "}
-                  · {f.location_id}{" "}
-                  {
-                    data.locations.find((l) => l.location_id === f.location_id)
-                      ?.location_name
-                  }{" "}
-                  · {displayTime(f.timestamp)}
-                </Text>
-                {reviewedIds.includes(f.anomaly_id) && (
-                  <Text style={{ color: colors.green, fontSize: 10 }}>
-                    Reviewed
-                  </Text>
-                )}
-              </View>
-            </Pressable>
-          ))}
+                <Icon name="chevron" color={colors.mutedForeground} size={15} />
+              </Pressable>
+            );
+          })}
         </Animated.ScrollView>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: 11 * scale,
-            minHeight: 36 * scale,
-          }}
-        >
-          <Text style={{ color: colors.muted, fontSize: 11 * scale }}>
-            {pending.length} to review
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Review queue"
-            accessibilityState={{ disabled: queue.length === 0 }}
-            disabled={!queue.length}
-            onPress={() => queue[0] && onInspect(queue[0].anomaly_id)}
-            hitSlop={6}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              borderRadius: 4,
-              backgroundColor: colors.greenFill,
-              paddingHorizontal: 10 * scale,
-              paddingVertical: 7 * scale,
-              opacity: queue.length ? 1 : 0.5,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 11 * scale,
-                fontWeight: "500",
-                color: "#173b30",
-              }}
-            >
-              Review queue
-            </Text>
-            <Icon name="arrow" color="#173b30" size={15} />
-          </Pressable>
-        </View>
-      </View>
+      </Panel>
       {datesOpen && (
         <DateRangeSheet
           colors={colors}

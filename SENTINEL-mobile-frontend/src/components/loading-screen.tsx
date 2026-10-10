@@ -1,16 +1,15 @@
 import { useEffect, useRef } from "react";
-import { Animated, Image, Text, View, useWindowDimensions } from "react-native";
-import type { ThemeColors } from "@sentinel/core";
+import { Animated, Image, Text, View } from "react-native";
+import { brandLogo } from "../assets";
+import { radii, type Theme } from "../design/tokens";
 
 export function LoadingScreen({
   colors,
   reducedMotion,
 }: {
-  colors: ThemeColors;
+  colors: Theme;
   reducedMotion: boolean;
 }) {
-  const { width } = useWindowDimensions();
-  const scale = Math.min(width / 426.5, 1.08);
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (reducedMotion) {
@@ -20,7 +19,7 @@ export function LoadingScreen({
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
-          toValue: 0.35,
+          toValue: 0.45,
           duration: 850,
           useNativeDriver: true,
         }),
@@ -34,87 +33,64 @@ export function LoadingScreen({
     animation.start();
     return () => animation.stop();
   }, [pulse, reducedMotion]);
+  const skeleton = { backgroundColor: colors.muted, borderRadius: radii.xl };
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, padding: 32 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, padding: 16 }}>
       <View
         style={{
-          flex: 1,
+          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "center",
-          gap: 20,
+          gap: 8,
+          paddingVertical: 14,
+          marginBottom: 12,
+          borderBottomWidth: 1,
+          borderColor: colors.border,
         }}
       >
-        <Animated.View style={{ opacity: pulse }}>
-          <Image
-            source={require("../../assets/design/shield-scanner.png")}
-            accessible={false}
-            resizeMode="contain"
-            style={{
-              width: 150 * scale,
-              height: 110 * scale,
-              transform: [{ translateX: -25 * scale }],
-            }}
-          />
-        </Animated.View>
+        <Image
+          source={brandLogo}
+          accessible={false}
+          resizeMode="contain"
+          style={{ width: 20, height: 22, tintColor: colors.foreground }}
+        />
         <Text
           style={{
-            color: colors.ink,
-            fontSize: 22 * scale,
-            letterSpacing: 8 * scale,
-            fontWeight: "700",
+            color: colors.foreground,
+            fontSize: 15,
+            fontWeight: "600",
+            letterSpacing: 0.6,
           }}
         >
           SENTINEL
-        </Text>
-        <Text
-          style={{
-            color: colors.muted,
-            fontSize: 11,
-            textAlign: "center",
-            letterSpacing: 0.6,
-            fontFamily: "Menlo",
-          }}
-        >
-          Inspection reliability · SPOT operations
         </Text>
       </View>
       <View
         accessible
         accessibilityRole="progressbar"
         accessibilityLabel="Loading inspections"
-        style={{ gap: 12, marginBottom: 18, alignItems: "center" }}
+        style={{ gap: 6, marginBottom: 16 }}
       >
-        <View
-          style={{
-            height: 3,
-            width: 140 * scale,
-            borderRadius: 2,
-            overflow: "hidden",
-            backgroundColor: colors.line,
-          }}
-        >
-          <Animated.View
-            style={{
-              height: 3,
-              width: "46%",
-              backgroundColor: colors.blue,
-              opacity: pulse,
-            }}
-          />
-        </View>
+        <Text style={{ fontSize: 14, color: colors.foreground }}>
+          Loading inspection data…
+        </Text>
+        <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
+          Fetching missions, results, and review priorities.
+        </Text>
       </View>
-      <Text
-        style={{
-          textAlign: "center",
-          color: colors.muted,
-          fontSize: 11,
-          letterSpacing: 1,
-          marginBottom: 30,
-          fontFamily: "Menlo",
-        }}
+      <Animated.View
+        style={{ opacity: pulse, gap: 12 }}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
       >
-        NextEra / SPOT
-      </Text>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[skeleton, { flex: 1, height: 112 }]} />
+          ))}
+        </View>
+        <View style={[skeleton, { height: 210 }]} />
+        <View style={[skeleton, { height: 46 }]} />
+        <View style={[skeleton, { height: 260 }]} />
+      </Animated.View>
     </View>
   );
 }

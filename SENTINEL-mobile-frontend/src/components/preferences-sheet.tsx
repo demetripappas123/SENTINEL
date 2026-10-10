@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Modal, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { ThemeColors } from "@sentinel/core";
-import type { Appearance } from "../design/tokens";
-import { Button, SegmentedControl, layout } from "../ui";
+import { Text, View } from "react-native";
+import type { Appearance, Theme } from "../design/tokens";
+import { Button, Overline, SegmentedControl, Sheet, layout } from "../ui";
 
 export function PreferencesSheet({
   colors,
@@ -16,7 +14,7 @@ export function PreferencesSheet({
   onReset,
   onClose,
 }: {
-  colors: ThemeColors;
+  colors: Theme;
   appearance: Appearance;
   reducedMotion: boolean;
   count: number;
@@ -27,129 +25,95 @@ export function PreferencesSheet({
   onClose: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const insets = useSafeAreaInsets();
   return (
-    <Modal
-      transparent
-      animationType={reducedMotion ? "none" : "slide"}
-      onRequestClose={onClose}
+    <Sheet
+      title="Preferences"
+      colors={colors}
+      reducedMotion={reducedMotion}
+      onClose={onClose}
+      closeLabel="Close preferences"
     >
+      <Overline colors={colors}>Appearance</Overline>
+      <SegmentedControl
+        options={[
+          {
+            value: "light",
+            label: "Light",
+            accessibilityLabel: "Light appearance",
+          },
+          {
+            value: "dark",
+            label: "Dark",
+            accessibilityLabel: "Dark appearance",
+          },
+        ]}
+        value={appearance}
+        colors={colors}
+        onChange={onAppearance}
+      />
       <View
         style={{
-          flex: 1,
-          justifyContent: "flex-end",
-          backgroundColor: "#0b142b66",
+          borderTopWidth: 1,
+          borderColor: colors.border,
+          marginTop: 8,
+          paddingTop: 20,
+          gap: 12,
         }}
       >
-        <View
-          accessibilityViewIsModal
-          style={{
-            backgroundColor: colors.surface,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            padding: 20,
-            paddingBottom: Math.max(insets.bottom, 20),
-            maxHeight: "90%",
-          }}
+        <Overline colors={colors}>Saved reviews</Overline>
+        <Text
+          style={[
+            layout.small,
+            { color: colors.mutedForeground, fontSize: 14 },
+          ]}
         >
-          <View style={[layout.row, { marginBottom: 20 }]}>
+          {count
+            ? `${count} ${count === 1 ? "review" : "reviews"} saved on this device.`
+            : "No saved reviews on this device."}
+        </Text>
+        {confirming ? (
+          <>
             <Text
-              accessibilityRole="header"
-              style={[layout.title, { color: colors.ink }]}
+              style={{ color: colors.foreground, fontSize: 14, lineHeight: 20 }}
             >
-              Preferences
+              Clear all saved acknowledgments? Findings will return to the
+              review queue. Inspection records and severity stay the same.
             </Text>
             <Button
-              label="Close"
-              accessibilityLabel="Close preferences"
+              label={saving ? "Resetting…" : "Confirm reset"}
+              accessibilityLabel="Confirm reset"
+              variant="destructive"
+              disabled={saving}
               colors={colors}
-              onPress={onClose}
-            />
-          </View>
-          <ScrollView contentContainerStyle={{ gap: 16 }}>
-            <Text style={{ color: colors.muted, fontSize: 12 }}>
-              APPEARANCE
-            </Text>
-            <SegmentedControl
-              options={[
-                {
-                  value: "light",
-                  label: "Light",
-                  accessibilityLabel: "Light appearance",
-                },
-                {
-                  value: "dark",
-                  label: "Dark",
-                  accessibilityLabel: "Dark appearance",
-                },
-              ]}
-              value={appearance}
-              colors={colors}
-              onChange={onAppearance}
-            />
-            <View
-              style={{
-                borderTopWidth: 1,
-                borderColor: colors.line,
-                paddingTop: 20,
-                gap: 12,
+              onPress={() => {
+                void onReset()
+                  .then(() => setConfirming(false))
+                  .catch(() => undefined);
               }}
-            >
-              <Text style={[layout.title, { color: colors.ink }]}>
-                Saved reviews
-              </Text>
-              <Text
-                style={{ color: colors.muted, fontSize: 14, lineHeight: 20 }}
-              >
-                {count
-                  ? `${count} ${count === 1 ? "review" : "reviews"} saved on this device.`
-                  : "No saved reviews on this device."}
-              </Text>
-              {confirming ? (
-                <>
-                  <Text
-                    style={{ color: colors.ink, fontSize: 14, lineHeight: 20 }}
-                  >
-                    Clear all saved acknowledgments? Findings will return to the
-                    review queue. Inspection records and severity stay the same.
-                  </Text>
-                  <Button
-                    label={saving ? "Resetting…" : "Confirm reset"}
-                    accessibilityLabel="Confirm reset"
-                    disabled={saving}
-                    colors={colors}
-                    onPress={() => {
-                      void onReset()
-                        .then(() => setConfirming(false))
-                        .catch(() => undefined);
-                    }}
-                  />
-                  <Button
-                    label="Keep reviews"
-                    disabled={saving}
-                    colors={colors}
-                    onPress={() => setConfirming(false)}
-                  />
-                </>
-              ) : (
-                <Button
-                  label="Reset saved reviews"
-                  colors={colors}
-                  onPress={() => setConfirming(true)}
-                />
-              )}
-              {error && (
-                <Text
-                  accessibilityRole="alert"
-                  style={{ color: colors.red, fontSize: 14 }}
-                >
-                  {error}
-                </Text>
-              )}
-            </View>
-          </ScrollView>
-        </View>
+            />
+            <Button
+              label="Keep reviews"
+              disabled={saving}
+              colors={colors}
+              onPress={() => setConfirming(false)}
+            />
+          </>
+        ) : (
+          <Button
+            label="Reset saved reviews"
+            colors={colors}
+            onPress={() => setConfirming(true)}
+          />
+        )}
+        {error && (
+          <Text
+            accessibilityRole="alert"
+            style={{ color: colors.destructive, fontSize: 14 }}
+          >
+            {error}
+          </Text>
+        )}
       </View>
-    </Modal>
+    </Sheet>
   );
 }

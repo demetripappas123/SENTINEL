@@ -1,7 +1,13 @@
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
-import type { ThemeColors } from "@sentinel/core";
-import { Icon } from "../design/icons";
-import type { Appearance } from "../design/tokens";
+import {
+  Image,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import type { Appearance, Theme } from "../design/tokens";
+import { IconButton } from "../ui";
+import { brandLogo } from "../assets";
 
 export function AppHeader({
   colors,
@@ -9,80 +15,74 @@ export function AppHeader({
   onToggleAppearance,
   onPreferences,
 }: {
-  colors: ThemeColors;
+  colors: Theme;
   appearance: Appearance;
   onToggleAppearance: () => void;
   onPreferences: () => void;
 }) {
   const { width, fontScale } = useWindowDimensions();
+  const showContext = width >= 375 && fontScale <= 1.3;
   return (
     <View
       style={{
         flexDirection: "row",
         alignItems: "center",
-        minHeight: 46,
-        paddingHorizontal: 16,
+        minHeight: 52,
+        paddingLeft: 16,
+        paddingRight: 10,
         borderBottomWidth: 1,
-        borderColor: colors.line,
-        gap: 8,
+        borderColor: colors.border,
+        backgroundColor: colors.background,
+        gap: 12,
       }}
     >
       <View
         accessible
         accessibilityLabel="SENTINEL"
-        style={{ flexDirection: "row", alignItems: "center", gap: 7 }}
+        style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
       >
-        <Icon name="shield" color={colors.ink} size={17} />
+        <Image
+          source={brandLogo}
+          accessible={false}
+          resizeMode="contain"
+          style={{ width: 20, height: 22, tintColor: colors.foreground }}
+        />
         <Text
           allowFontScaling={false}
           style={{
-            color: colors.ink,
-            fontSize: 13,
-            fontWeight: "700",
-            letterSpacing: 1.3,
+            color: colors.foreground,
+            fontSize: 15,
+            fontWeight: "600",
+            letterSpacing: 0.6,
           }}
         >
           SENTINEL
         </Text>
       </View>
-      <View
-        style={{
-          height: 15,
-          borderLeftWidth: 1,
-          borderColor: colors.line,
-          marginHorizontal: 3,
-        }}
-      />
-      {width >= 375 && fontScale <= 1.3 && (
-        <View
-          accessible
-          accessibilityLabel="NextEra, SPOT operations"
-          style={{ flex: 1, alignItems: "flex-start", marginLeft: 6 }}
-        >
-          <Text style={{ fontSize: 10, color: colors.muted }}>
+      {showContext && (
+        <>
+          <View
+            style={{
+              height: 20,
+              borderLeftWidth: 1,
+              borderColor: colors.border,
+            }}
+          />
+          <Text
+            accessibilityLabel="NextEra, SPOT operations"
+            style={{ fontSize: 12, color: colors.mutedForeground }}
+          >
             NextEra / SPOT
           </Text>
-        </View>
+        </>
       )}
-      {(width < 375 || fontScale > 1.3) && <View style={{ flex: 1 }} />}
-      <Pressable
-        accessibilityRole="button"
+      <View style={{ flex: 1 }} />
+      <IconButton
+        icon={appearance === "light" ? "moon" : "sun"}
         accessibilityLabel={`Switch to ${appearance === "light" ? "dark" : "light"} appearance`}
         onPress={onToggleAppearance}
-        style={({ pressed }) => ({
-          minWidth: 44,
-          minHeight: 44,
-          alignItems: "center",
-          justifyContent: "center",
-          opacity: pressed ? 0.6 : 1,
-        })}
-      >
-        <Icon
-          name={appearance === "light" ? "moon" : "sun"}
-          color={colors.muted}
-          size={19}
-        />
-      </Pressable>
+        colors={colors}
+      />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open preferences"
@@ -97,17 +97,23 @@ export function AppHeader({
       >
         <View
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: colors.blueSoft,
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.secondary,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
           <Text
             allowFontScaling={false}
-            style={{ fontSize: 11, fontWeight: "600", color: colors.blue }}
+            style={{
+              fontSize: 10,
+              fontWeight: "500",
+              color: colors.foreground,
+            }}
           >
             OP
           </Text>
