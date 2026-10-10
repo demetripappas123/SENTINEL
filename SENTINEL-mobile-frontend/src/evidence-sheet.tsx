@@ -2,7 +2,6 @@ import { Image, Modal, ScrollView, Text, View } from "react-native";
 import {
   actionFindings,
   assetName,
-  dataset,
   humanize,
   locationName,
   missionActions,
@@ -13,6 +12,7 @@ import {
   type Mission,
   type ThemeColors,
 } from "@sentinel/core";
+import { useInspectionData } from "./state/api-data";
 import { Badge, Button, Card, layout } from "./ui";
 
 const images: Record<string, number> = {
@@ -41,16 +41,16 @@ export function EvidenceSheet({
   onReview: (id: string) => void;
   onAction: (action: Action) => void;
 }) {
-  const actions = mission ? missionActions(mission.mission_id) : [];
+  const data = useInspectionData();
+  const actions = mission ? missionActions(data, mission.mission_id) : [];
   const selectedAction = finding
-    ? dataset.actions.find((a) => a.action_id === finding.action_id)
+    ? data.actions.find((a) => a.action_id === finding.action_id)
     : action;
-  const readings = dataset.readings.filter(
+  const readings = data.readings.filter(
     (r) => r.action_id === selectedAction?.action_id,
   );
-  // In mission mode, surface findings recorded by the selected action.
   const linkedFindings =
-    !finding && selectedAction ? actionFindings(selectedAction.action_id) : [];
+    !finding && selectedAction ? actionFindings(data, selectedAction.action_id) : [];
   return (
     <Modal
       visible={!!finding || !!mission}
@@ -103,7 +103,7 @@ export function EvidenceSheet({
                     { color: colors.ink, marginVertical: 12 },
                   ]}
                 >
-                  {assetName(finding.asset_id)}
+                  {assetName(data, finding.asset_id)}
                 </Text>
                 <Text
                   style={[
@@ -112,7 +112,7 @@ export function EvidenceSheet({
                   ]}
                 >
                   {finding.mission_id} · {finding.location_id} ·{" "}
-                  {locationName(finding.location_id)}
+                  {locationName(data, finding.location_id)}
                 </Text>
               </>
             )}
@@ -182,7 +182,9 @@ export function EvidenceSheet({
                   <View style={layout.row}>
                     <Text style={{ color: colors.muted }}>Battery</Text>
                     <Text style={{ color: colors.ink }}>
-                      {selectedAction.battery_pct}%
+                      {selectedAction.battery_pct == null
+                        ? "Pending"
+                        : selectedAction.battery_pct + "%"}
                     </Text>
                   </View>
                   <Text style={[layout.small, { color: colors.muted }]}>
@@ -190,7 +192,9 @@ export function EvidenceSheet({
                   </Text>
                   {selectedAction.status === "FAILED" && (
                     <Text style={{ color: colors.amber, fontWeight: "600" }}>
-                      {humanize(selectedAction.failure_type)}
+                      {selectedAction.failure_type
+                        ? humanize(selectedAction.failure_type)
+                        : "Pending"}
                     </Text>
                   )}
                 </Card>

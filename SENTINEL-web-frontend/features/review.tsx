@@ -1,53 +1,53 @@
 "use client";
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Search, X } from "lucide-react";
 import {
-  dataset,
-  getFindings,
+  assetName,
+  humanize,
+  locationName,
+  pending,
+  selectQueue,
   type Configuration,
-  type Finding,
   type FindingStatus,
 } from "@sentinel/core";
-import {
-  Button,
-  ConfigurationControl,
-  Empty,
-  PageHeading,
-  Panel,
-} from "../components/ui";
-import { FindingDialog, FindingRow } from "../components/findings";
+import type { QueueItem } from "@sentinel/core/api";
+import { Button, ConfigurationControl, Empty, PageHeading, Panel, Tag } from "../components/ui";
 import { useReviews } from "../lib/browser-state";
+import { useInspectionData } from "../lib/inspection-data";
+import { useQueue } from "../lib/queue-data";
 
 export function ReviewQueue({ missionId }: { missionId?: string }) {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
-  const [status, setStatus] = useState<FindingStatus>(
-    missionId ? "all" : "required",
-  );
+  const [status, setStatus] = useState<FindingStatus>(missionId ? "all" : "required");
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Finding | null>(null);
+  const [selected, setSelected] = useState<QueueItem | null>(null);
+  const data = useInspectionData();
+  const queue = useQueue();
   const { reviewedIds, markReviewed, resetReviews } = useReviews();
-  const findings = getFindings(dataset, {
+  const scenarios = new globalThis.Map(
+    data.missions.map((mission) => [mission.mission_id, mission.scenario]),
+  );
+  const items = selectQueue(queue, {
     configuration,
     status,
     query,
     reviewedIds,
     missionId,
+    scenarios,
   });
   return (
     <>
-      <PageHeading title={missionId ? "Findings · " + missionId : "Review"}>
+      <PageHeading title={missionId ? "Queue · " + missionId : "Review"}>
         <Button className="quiet" onClick={resetReviews}>
           Reset reviews
         </Button>
       </PageHeading>
       <div className="toolbar">
-        <ConfigurationControl
-          value={configuration}
-          onChange={setConfiguration}
-        />
+        <ConfigurationControl value={configuration} onChange={setConfiguration} />
       </div>
       <div className="queue-toolbar">
-        <div className="segmented" role="group" aria-label="Finding status">
+        <div className="segmented" role="group" aria-label="Queue status">
           {(
             [
               ["required", "To review"],
@@ -69,39 +69,142 @@ export function ReviewQueue({ missionId }: { missionId?: string }) {
           <Search className="icon" />
           <input
             type="search"
-            aria-label="Search findings"
-            placeholder="Asset or waypoint"
+            aria-label="Search queue"
+            placeholder="Asset, waypoint, or cause"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
       </div>
       <Panel
-        title="Findings"
-        action={<span className="small muted">By severity</span>}
+        title="Queue"
+        action={<span className="small muted">By rank</span>}
         className="full-queue"
       >
         <div className="finding-list">
-          {findings.length ? (
-            findings.map((f) => (
-              <FindingRow
-                key={f.anomaly_id}
-                finding={f}
-                reviewed={reviewedIds.includes(f.anomaly_id)}
+          {items.length ? (
+            items.map((item) => (
+              <QueueRow
+                key={item.id}
+                item={item}
+                reviewed={reviewedIds.includes(item.id)}
                 onOpen={setSelected}
               />
             ))
           ) : (
-            <Empty />
+            <Empty title="No matching queue items" />
           )}
         </div>
       </Panel>
-      <FindingDialog
-        finding={selected}
+      <QueueDialog
+        item={selected}
         onClose={() => setSelected(null)}
         onReview={markReviewed}
-        reviewed={!!selected && reviewedIds.includes(selected.anomaly_id)}
+        reviewed={!!selected && reviewedIds.includes(selected.id)}
       />
     </>
+  );
+}
+
+function QueueRow({
+  item,
+  reviewed = false,
+  onOpen,
+}: {
+  item: QueueItem;
+  reviewed?: boolean;
+  onOpen: (item: QueueItem) => void;
+}) {
+  const data = useInspectionData();
+  return (
+    <button
+      className={"finding-row " + (reviewed ? "reviewed" : "")}
+      onClick={() => onOpen(item)}
+      aria-label={
+        humanize(item.verdict) +
+        ", " +
+        humanize(item.cause) +
+        ", " +
+        (item.asset_id || item.mission_id) +
+        (reviewed ? ", reviewed" : "")
+      }
+    >
+      <div className="stack">
+        <strong>{humanize(item.cause)}</strong>
+        <p className="mono">
+          {item.asset_id ? assetName(data, item.asset_id) : "Pending"} ·{" "}
+          {pending(item.location_id)} · {item.mission_id}
+        </p>
+      </div>
+      <Tag tone={reviewed ? "green" : item.verdict === "inspection_failure" ? "amber" : "blue"}>
+        {reviewed ? "Reviewed" : humanize(item.verdict)}
+      </Tag>
+    </button>
+  );
+}
+
+function QueueDialog({
+  item,
+  onClose,
+  onReview,
+  reviewed,
+}: {
+  item: QueueItem | null;
+  onClose: () => void;
+  onReview: (id: string) => void;
+  reviewed: boolean;
+}) {
+  const data = useInspectionData();
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (item && dialog && !dialog.open) dialog.showModal();
+    return () => {
+      if (dialog?.open) dialog.close();
+    };
+  }, [item]);
+  if (!item) return null;
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby="queue-title"
+      onCancel={onClose}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <header className="dialog-head">
+        <div>
+          <div className="row">
+            <Tag tone={item.verdict === "inspection_failure" ? "amber" : "blue"}>
+              {humanize(item.verdict)}
+            </Tag>
+            <span className="mono muted">Rank {item.rank}</span>
+          </div>
+          <h2 id="queue-title">{humanize(item.cause)}</h2>
+        </div>
+        <Button className="quiet square" aria-label="Close queue item" onClick={onClose}>
+          <X className="icon" />
+        </Button>
+      </header>
+      <div className="dialog-content">
+        <strong>{item.asset_id ? assetName(data, item.asset_id) : "Pending"}</strong>
+        <p className="small muted">
+          {pending(item.asset_id)} · {pending(item.location_id)} ·{" "}
+          {item.location_id ? locationName(data, item.location_id) : "Pending"}
+        </p>
+        <p>{item.explanation}</p>
+        <div className="row">
+          <Link className="btn" href={"/missions/" + item.mission_id}>
+            Open mission
+          </Link>
+          {!reviewed && (
+            <Button className="green" onClick={() => onReview(item.id)}>
+              Mark reviewed
+            </Button>
+          )}
+        </div>
+      </div>
+    </dialog>
   );
 }

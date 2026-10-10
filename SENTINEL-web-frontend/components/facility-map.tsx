@@ -1,5 +1,7 @@
+"use client";
+
 import Image from "next/image";
-import { dataset } from "@sentinel/core";
+import { useInspectionData } from "../lib/inspection-data";
 
 const points: Record<string, [number, number]> = {
   WP01: [10, 76],
@@ -25,6 +27,7 @@ export function FacilityMap({
   selected: string;
   onSelect: (id: string) => void;
 }) {
+  const data = useInspectionData();
   return (
     <div className="map-graphic">
       <Image
@@ -34,7 +37,7 @@ export function FacilityMap({
         height={593}
         unoptimized
       />
-      {dataset.locations.map((l) => (
+      {data.locations.map((l) => (
         <button
           key={l.location_id}
           className={

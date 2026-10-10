@@ -59,15 +59,15 @@ def to_dataset(batch: CanonicalBatch) -> InspectionDataset:
         missions=[
             MissionOut(
                 **mission.model_dump(include=set(MissionOut.model_fields) - {"start_time", "end_time"}),
-                start_time=format_timestamp(mission.start_time),
-                end_time=format_timestamp(mission.end_time),
+                start_time=_timestamp(mission.start_time),
+                end_time=_timestamp(mission.end_time),
             )
             for mission in sorted(batch.missions, key=lambda row: row.mission_id)
         ],
         actions=[
             ActionOut(
                 **action.model_dump(include=set(ActionOut.model_fields) - {"timestamp", "failure_type"}),
-                timestamp=format_timestamp(action.timestamp),
+                timestamp=_timestamp(action.timestamp),
                 failure_type=action.failure_type or "",
             )
             for action in sorted(batch.actions, key=lambda row: row.action_id)
@@ -75,7 +75,7 @@ def to_dataset(batch: CanonicalBatch) -> InspectionDataset:
         findings=[
             FindingOut(
                 **claim.model_dump(include=set(FindingOut.model_fields) - {"timestamp"}),
-                timestamp=format_timestamp(claim.timestamp),
+                timestamp=_timestamp(claim.timestamp),
             )
             for claim in sorted(batch.anomaly_claims, key=lambda row: row.anomaly_id)
         ],
@@ -92,6 +92,11 @@ def to_dataset(batch: CanonicalBatch) -> InspectionDataset:
             for reading in sorted(batch.readings, key=lambda row: row.reading_id)
         ],
     )
+
+
+def _timestamp(value: datetime | None) -> str | None:
+    """A missing time stays null so the screen can show it as not received."""
+    return format_timestamp(value) if value is not None else None
 
 
 def format_timestamp(value: datetime | None) -> str:

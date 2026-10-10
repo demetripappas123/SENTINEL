@@ -1,10 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import {
   humanize,
   missionActions,
+  pending,
   shortTime,
   type Mission,
 } from "@sentinel/core";
+import { useInspectionData } from "../lib/inspection-data";
 import { Tag } from "./ui";
 
 export function MissionTable({
@@ -14,6 +18,7 @@ export function MissionTable({
   missions: Mission[];
   full?: boolean;
 }) {
+  const data = useInspectionData();
   return (
     <div className="table-wrap">
       <table>
@@ -28,7 +33,7 @@ export function MissionTable({
         </thead>
         <tbody>
           {missions.map((m) => {
-            const actions = missionActions(m.mission_id),
+            const actions = missionActions(data, m.mission_id),
               passed = actions.filter((a) => a.status === "SUCCESS").length;
             return (
               <tr key={m.mission_id}>
@@ -38,7 +43,11 @@ export function MissionTable({
                     href={"/missions/" + m.mission_id}
                   >
                     <span className="mono">{m.mission_id}</span>
-                    <span>Route {Number(m.mission_id.slice(1))}</span>
+                    <span>
+                      {/^M\d+$/.test(m.mission_id)
+                        ? "Route " + Number(m.mission_id.slice(1))
+                        : m.mission_name}
+                    </span>
                   </Link>
                   {full && (
                     <small className="muted">{shortTime(m.start_time)}</small>
@@ -67,7 +76,11 @@ export function MissionTable({
                 <td>
                   {full ? (
                     <Tag tone="blue">
-                      {m.configuration_version} · {humanize(m.scenario)}
+                      {m.configuration_version || m.scenario
+                        ? pending(m.configuration_version) +
+                          " · " +
+                          (m.scenario ? humanize(m.scenario) : "—")
+                        : "—"}
                     </Tag>
                   ) : actions.length > passed ? (
                     <Tag tone="amber">{actions.length - passed} failed</Tag>
@@ -77,7 +90,12 @@ export function MissionTable({
                 </td>
                 {full && (
                   <td className="mono">
-                    {m.start_battery_pct}% → {m.end_battery_pct}%
+                    {m.start_battery_pct == null && m.end_battery_pct == null
+                      ? "Pending"
+                      : pending(m.start_battery_pct) +
+                        "% → " +
+                        pending(m.end_battery_pct) +
+                        "%"}
                   </td>
                 )}
               </tr>

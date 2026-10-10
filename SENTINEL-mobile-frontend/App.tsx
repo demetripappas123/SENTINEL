@@ -15,10 +15,23 @@ import {
   type Mission,
 } from "@sentinel/core";
 import { Attention, FacilityScreen, MissionHistory } from "./src/screens";
+import { InspectionDataProvider, useInspectionData } from "./src/state/api-data";
+import { QueueProvider } from "./src/state/queue-data";
 import { EvidenceSheet } from "./src/evidence-sheet";
 import { Badge, Button, layout } from "./src/ui";
 
 export default function App() {
+  return (
+    <InspectionDataProvider>
+      <QueueProvider>
+        <AppScreen />
+      </QueueProvider>
+    </InspectionDataProvider>
+  );
+}
+
+function AppScreen() {
+  const data = useInspectionData();
   const [tab, setTab] = useState<"attention" | "missions" | "facility">(
     "attention",
   );
@@ -97,14 +110,23 @@ export default function App() {
                 status={status}
                 setStatus={setStatus}
                 reviewedIds={reviewedIds}
-                onInspect={setFinding}
+                onInspect={(item) => {
+                  const linked = data.findings.find((finding) => finding.action_id === item.action_id);
+                  const linkedAction = data.actions.find((row) => row.action_id === item.action_id);
+                  setFinding(linked ?? null);
+                  setAction(linkedAction ?? null);
+                  setMission(
+                    data.missions.find((row) => row.mission_id === item.mission_id) ?? null,
+                  );
+                }}
+                onReview={(id) => setReviewedIds((ids) => [...new Set([...ids, id])])}
               />
             ) : tab === "missions" ? (
               <MissionHistory
                 colors={colors}
                 onInspect={(m) => {
                   setMission(m);
-                  const actions = missionActions(m.mission_id);
+                  const actions = missionActions(data, m.mission_id);
                   setAction(
                     actions.find((a) => a.status === "FAILED") || actions[0],
                   );

@@ -1,16 +1,18 @@
 import { Image, Pressable, Text, TextInput, View } from "react-native";
 import {
   assetName,
-  dataset,
-  getFindings,
   humanize,
   missionActions,
+  pending,
+  selectQueue,
   shortTime,
-  type Finding,
   type FindingStatus,
   type Mission,
   type ThemeColors,
 } from "@sentinel/core";
+import type { QueueItem } from "@sentinel/core/api";
+import { useInspectionData } from "./state/api-data";
+import { useQueue } from "./state/queue-data";
 import { Badge, Button, Card, layout } from "./ui";
 
 export function Attention({
@@ -21,6 +23,7 @@ export function Attention({
   setStatus,
   reviewedIds,
   onInspect,
+  onReview,
 }: {
   colors: ThemeColors;
   query: string;
@@ -28,10 +31,15 @@ export function Attention({
   status: FindingStatus;
   setStatus: (value: FindingStatus) => void;
   reviewedIds: string[];
-  onInspect: (finding: Finding) => void;
+  onInspect: (item: QueueItem) => void;
+  onReview: (id: string) => void;
 }) {
-  const pending = getFindings(dataset, { reviewedIds });
-  const findings = getFindings(dataset, { query, status, reviewedIds });
+  const data = useInspectionData();
+  const queue = useQueue();
+  const scenarios = new Map(data.missions.map((mission) => [mission.mission_id, mission.scenario]));
+  const pendingItems = selectQueue(queue, { reviewedIds, scenarios });
+  const items = selectQueue(queue, { query, status, reviewedIds, scenarios });
+  const failures = pendingItems.filter((item) => item.verdict === "inspection_failure").length;
   return (
     <>
       <Text
@@ -50,21 +58,18 @@ export function Attention({
               letterSpacing: -1,
             }}
           >
-            {pending.length}
+            {pendingItems.length}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>to review</Text>
         </View>
         <Badge
           colors={colors}
-          severity="CRITICAL"
-          label={
-            pending.filter((f) => f.severity === "CRITICAL").length +
-            " critical"
-          }
+          severity="MEDIUM"
+          label={failures + " inspection failures"}
         />
       </View>
       <TextInput
-        accessibilityLabel="Search findings"
+        accessibilityLabel="Search queue"
         placeholder="Asset or waypoint"
         placeholderTextColor={colors.muted}
         value={query}
@@ -100,7 +105,7 @@ export function Attention({
           />
         ))}
       </View>
-      {!findings.length && (
+      {!items.length && (
         <Text
           accessibilityRole="text"
           style={{
@@ -109,55 +114,52 @@ export function Attention({
             textAlign: "center",
           }}
         >
-          No matching findings
+          No matching queue items
         </Text>
       )}
-      {findings.map((f) => (
+      {items.map((item) => (
         <Card
-          key={f.anomaly_id}
+          key={item.id}
           colors={colors}
           style={{
             borderLeftWidth: 3,
-            borderLeftColor: ["CRITICAL", "HIGH"].includes(f.severity)
-              ? colors.red
-              : f.severity === "MEDIUM"
-                ? colors.amber
-                : colors.blue,
+            borderLeftColor:
+              item.verdict === "inspection_failure" ? colors.amber : colors.blue,
           }}
         >
           <View style={layout.row}>
             <Badge
               label={
-                reviewedIds.includes(f.anomaly_id)
+                reviewedIds.includes(item.id)
                   ? "Reviewed"
-                  : humanize(f.severity)
+                  : humanize(item.verdict)
               }
-              severity={
-                reviewedIds.includes(f.anomaly_id) ? "SUCCESS" : f.severity
-              }
+              severity={reviewedIds.includes(item.id) ? "SUCCESS" : "MEDIUM"}
               colors={colors}
             />
             <Text style={[layout.mono, { color: colors.muted }]}>
-              {f.anomaly_id}
+              Rank {item.rank}
             </Text>
           </View>
           <Text style={[layout.title, { color: colors.ink }]}>
-            {humanize(f.anomaly_type)}
+            {humanize(item.cause)}
           </Text>
           <Text style={[layout.small, { color: colors.muted }]}>
-            {assetName(f.asset_id)} · {f.location_id}
+            {item.asset_id ? assetName(data, item.asset_id) : "Pending"} ·{" "}
+            {pending(item.location_id)}
           </Text>
+          <Text style={[layout.small, { color: colors.ink }]}>{item.explanation}</Text>
           <View style={layout.row}>
-            <Text style={[layout.small, { color: colors.muted }]}>
-              {shortTime(f.timestamp)}
-            </Text>
+            <Button
+              label={reviewedIds.includes(item.id) ? "Reviewed" : "Mark reviewed"}
+              colors={colors}
+              onPress={() => onReview(item.id)}
+            />
             <Button
               label="Inspect →"
-              accessibilityLabel={
-                "Inspect " + humanize(f.anomaly_type) + " " + f.asset_id
-              }
+              accessibilityLabel={"Inspect " + humanize(item.cause) + " " + (item.asset_id || item.mission_id)}
               colors={colors}
-              onPress={() => onInspect(f)}
+              onPress={() => onInspect(item)}
             />
           </View>
         </Card>
@@ -172,6 +174,7 @@ export function MissionHistory({
   colors: ThemeColors;
   onInspect: (mission: Mission) => void;
 }) {
+  const data = useInspectionData();
   return (
     <>
       <Text
@@ -180,11 +183,11 @@ export function MissionHistory({
       >
         Missions
       </Text>
-      {dataset.missions
+      {data.missions
         .slice()
         .reverse()
         .map((m) => {
-          const actions = missionActions(m.mission_id),
+          const actions = missionActions(data, m.mission_id),
             passed = actions.filter((a) => a.status === "SUCCESS").length;
           return (
             <Card key={m.mission_id} colors={colors}>
@@ -239,7 +242,8 @@ export function FacilityScreen({
   waypoint: string;
   onSelect: (id: string) => void;
 }) {
-  const selected = dataset.locations.find((l) => l.location_id === waypoint)!;
+  const data = useInspectionData();
+  const selected = data.locations.find((l) => l.location_id === waypoint);
   return (
     <>
       <Text
@@ -260,13 +264,15 @@ export function FacilityScreen({
           accessibilityRole="header"
           style={[layout.title, { color: colors.ink }]}
         >
-          {selected.location_name}
+          {selected ? selected.location_name : "No locations"}
         </Text>
         <Text style={[layout.small, { color: colors.muted }]}>
-          Floor {selected.floor} · {humanize(selected.environment)}
+          {selected
+            ? "Floor " + selected.floor + " · " + humanize(selected.environment)
+            : "No stored locations"}
         </Text>
       </Card>
-      {dataset.locations.map((l) => (
+      {data.locations.map((l) => (
         <Pressable
           key={l.location_id}
           accessibilityRole="button"

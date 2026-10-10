@@ -11,7 +11,17 @@ export * from "./types";
 export * from "./theme";
 export * from "./repository";
 export * from "./inspection-selectors";
+export * from "./queue";
 export const dataset: InspectionDataset = challenge;
+export const emptyDataset: InspectionDataset = {
+  missions: [],
+  actions: [],
+  findings: [],
+  assets: [],
+  locations: [],
+  readings: [],
+  events: [],
+};
 
 export function getMetrics(
   data: InspectionDataset,
@@ -83,8 +93,8 @@ export function getFindings(
             f.asset_id,
             f.location_id,
             f.mission_id,
-            assets.get(f.asset_id),
-            locations.get(f.location_id),
+            f.asset_id ? assets.get(f.asset_id) : "",
+            f.location_id ? locations.get(f.location_id) : "",
           ]
             .join(" ")
             .toLowerCase()
@@ -93,7 +103,7 @@ export function getFindings(
     .sort(
       (a, b) =>
         (rank[b.severity] || 0) - (rank[a.severity] || 0) ||
-        b.timestamp.localeCompare(a.timestamp),
+        (b.timestamp ?? "").localeCompare(a.timestamp ?? ""),
     );
 }
 
@@ -102,18 +112,22 @@ export const humanize = (value: string) =>
     .toLowerCase()
     .replace(/_/g, " ")
     .replace(/^./, (c) => c.toUpperCase());
-export const shortTime = (value: string) =>
-  value.slice(5, 10) + " · " + value.slice(11, 16);
-export const missionActions = (missionId: string) =>
-  dataset.actions
+export const pending = (value: string | number | null | undefined) =>
+  value == null || value === "" ? "Pending" : String(value);
+export const shortTime = (value: string | null) =>
+  value ? value.slice(5, 10) + " · " + value.slice(11, 16) : "Pending";
+export const missionActions = (data: InspectionDataset, missionId: string) =>
+  data.actions
     .filter((a) => a.mission_id === missionId)
-    .sort((a, b) => a.sequence - b.sequence);
-export const actionFindings = (actionId: string) =>
-  getFindings(dataset, { status: "all" }).filter((finding) => finding.action_id === actionId);
-export const assetName = (id: string) =>
-  dataset.assets.find((a) => a.asset_id === id)?.asset_name || id;
-export const locationName = (id: string) =>
-  dataset.locations.find((l) => l.location_id === id)?.location_name || id;
+    .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+export const actionFindings = (data: InspectionDataset, actionId: string) =>
+  getFindings(data, { status: "all" }).filter((finding) => finding.action_id === actionId);
+export const assetName = (data: InspectionDataset, id: string | null) =>
+  id ? data.assets.find((a) => a.asset_id === id)?.asset_name || id : "Pending";
+export const locationName = (data: InspectionDataset, id: string | null) =>
+  id
+    ? data.locations.find((l) => l.location_id === id)?.location_name || id
+    : "Pending";
 export const sampleImage = (type: string) =>
   /TEMPERATURE|THERMAL/.test(type)
     ? "thermal_pump_bearing_01.jpg"

@@ -61,6 +61,26 @@ describe("initial FastAPI client", () => {
       createApiClient("http://localhost:8000", response(body)).getQueue(),
     ).rejects.toThrow("Invalid queue response");
   });
+  it("reads operational metrics from the API", async () => {
+    const body = {
+      versions: [],
+      inspections: [],
+      locations: [],
+      battery: [],
+      missions: {
+        mission_count: 27,
+        completed_count: 26,
+        completed_with_failures: 21,
+        failed_mission_ids: ["M017"],
+      },
+    };
+    const fetcher = response(body);
+    expect(await createApiClient("http://localhost:8000", fetcher).getMetrics()).toEqual(body);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://localhost:8000/metrics",
+      expect.objectContaining({ headers: { Accept: "application/json" } }),
+    );
+  });
   it("rejects an unhealthy response", async () => {
     await expect(
       createApiClient(
@@ -95,6 +115,54 @@ describe("initial FastAPI client", () => {
         "http://localhost:8000/dataset?source=kit",
         expect.objectContaining({ headers: { Accept: "application/json" } }),
       );
+    });
+    it("loads kit, orbit, and spot together", async () => {
+      const empty = {
+        missions: [],
+        actions: [],
+        findings: [],
+        assets: [],
+        locations: [],
+        readings: [],
+        events: [],
+      };
+      const fetcher = vi.fn<typeof fetch>(async (input) => {
+        const source = new URL(String(input)).searchParams.get("source");
+        return new Response(
+          JSON.stringify(source === "orbit" ? dataset : empty),
+          { status: 200 },
+        );
+      });
+      const live = await createApiClient(
+        "http://localhost:8000",
+        fetcher,
+      ).getLiveDataset();
+      expect(live.missions).toEqual(dataset.missions);
+      expect(fetcher.mock.calls.map((call) => String(call[0]))).toEqual([
+        "http://localhost:8000/dataset?source=kit",
+        "http://localhost:8000/dataset?source=orbit",
+        "http://localhost:8000/dataset?source=spot",
+      ]);
+    });
+    it("accepts a mission that has not received kit-only fields", async () => {
+      const partial = {
+        ...dataset,
+        missions: [
+          {
+            ...challenge.missions[0],
+            scenario: null,
+            configuration_version: null,
+            duration_min: null,
+            start_battery_pct: null,
+            end_battery_pct: null,
+          },
+        ],
+      };
+      await expect(
+        createApiClient("http://localhost:8000", response(partial)).getDataset(
+          "orbit",
+        ),
+      ).resolves.toEqual(partial);
     });
     it("exposes server errors rather than an empty dataset", async () => {
       await expect(

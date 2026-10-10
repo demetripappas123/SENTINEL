@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from app.mappers.kit import map_kit
-from app.schemas.canonical import Action, CanonicalBatch, Source
+from app.schemas.canonical import Action, CanonicalBatch, Mission, Source
 from app.services.dataset import format_timestamp, to_dataset
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,6 +55,29 @@ def _action(action_id: str, failure_type: str | None = None) -> Action:
         duration_sec=10,
         scenario="BASELINE",
     )
+
+
+def test_partial_orbit_mission_keeps_missing_fields_null():
+    dataset = to_dataset(
+        CanonicalBatch(
+            missions=[
+                Mission(
+                    source=Source.orbit,
+                    mission_id="orbit-run-demo-001",
+                    mission_name="Pipe gallery walk",
+                    start_time=datetime(2026, 10, 10, 17, 0, tzinfo=timezone.utc),
+                    mission_status="COMPLETED",
+                )
+            ]
+        )
+    )
+    mission = dataset.missions[0]
+    assert mission.start_time == "2026-10-10T17:00:00"
+    assert mission.end_time is None
+    assert mission.duration_min is None
+    assert mission.start_battery_pct is None
+    assert mission.scenario is None
+    assert mission.configuration_version is None
 
 
 def test_missing_failure_type_becomes_empty_string():

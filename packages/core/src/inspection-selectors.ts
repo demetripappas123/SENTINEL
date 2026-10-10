@@ -26,7 +26,7 @@ export function scopeDataset(
   validateDateRange(range);
   if (!range) return data;
   const missions = data.missions.filter((mission) => {
-    const day = mission.start_time.slice(0, 10);
+    const day = mission.start_time?.slice(0, 10) ?? "";
     return day >= range.start && day <= range.end;
   });
   const missionIds = new Set(missions.map((mission) => mission.mission_id));
@@ -54,7 +54,7 @@ export function selectMissionActions(
 ) {
   return data.actions
     .filter((action) => action.mission_id === missionId)
-    .sort((a, b) => a.sequence - b.sequence);
+    .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
 }
 
 export function selectActionFindings(

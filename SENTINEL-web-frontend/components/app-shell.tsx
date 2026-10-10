@@ -14,9 +14,22 @@ import {
   Sun,
   TriangleAlert,
 } from "lucide-react";
-import { dataset, getFindings } from "@sentinel/core";
+import { selectQueue } from "@sentinel/core";
 import { useReviews, useTheme } from "../lib/browser-state";
+import { useInspectionData } from "../lib/inspection-data";
+import { useQueue } from "../lib/queue-data";
 import { Button, Tag } from "./ui";
+
+function storedRange(missions: { start_time: string | null }[]) {
+  const days = missions
+    .map((mission) => mission.start_time?.slice(0, 10) ?? "")
+    .filter((day) => day.length === 10)
+    .sort();
+  if (!days.length) return "No stored runs";
+  return days[0] === days[days.length - 1]
+    ? days[0]
+    : days[0] + " – " + days[days.length - 1];
+}
 
 const navigation = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -27,16 +40,18 @@ const navigation = [
 ];
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
+  const data = useInspectionData();
+  const queue = useQueue();
   const { reviewedIds } = useReviews();
   const { theme, toggleTheme } = useTheme();
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
   const counts: Record<string, number | undefined> = {
-    "/missions": dataset.missions.length,
-    "/review": getFindings(dataset, { reviewedIds }).length,
-    "/facility": dataset.locations.length,
-    "/replay": dataset.events.length,
+    "/missions": data.missions.length,
+    "/review": selectQueue(queue, { reviewedIds }).length,
+    "/facility": data.locations.length,
+    "/replay": data.events.length,
   };
   return (
     <div className="shell">
@@ -93,8 +108,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="sidebar-bottom">
-          <p className="mono">27 missions · 270 actions</p>
-          <p>Sep 1–10, 2026</p>
+          <p className="mono">
+            {data.missions.length} missions · {data.actions.length} actions
+          </p>
+          <p>{storedRange(data.missions)}</p>
         </div>
       </aside>
       <main id="main" className="main">

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AppShell } from "../components/app-shell";
+import { InspectionDataProvider } from "../lib/inspection-data";
+import { QueueProvider } from "../lib/queue-data";
 import "./globals.css";
 export const metadata: Metadata = {
   title: "SENTINEL | SPOT operations",
@@ -14,7 +16,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        <AppShell>{children}</AppShell>
+        <InspectionDataProvider>
+          <QueueProvider>
+            <AppShell>{children}</AppShell>
+          </QueueProvider>
+        </InspectionDataProvider>
       </body>
     </html>
   );

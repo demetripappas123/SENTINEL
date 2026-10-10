@@ -9,38 +9,38 @@ from pydantic import BaseModel, Field
 class MissionOut(BaseModel):
     mission_id: str
     mission_name: str
-    scenario: str
-    configuration_version: str
-    start_time: str
-    end_time: str
-    duration_min: float
-    start_battery_pct: float
-    end_battery_pct: float
+    scenario: str | None = None
+    configuration_version: str | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+    duration_min: float | None = None
+    start_battery_pct: float | None = None
+    end_battery_pct: float | None = None
     mission_status: str
 
 
 class ActionOut(BaseModel):
     action_id: str
     mission_id: str
-    sequence: int
-    timestamp: str
-    location_id: str
-    asset_id: str
+    sequence: int | None = None
+    timestamp: str | None = None
+    location_id: str | None = None
+    asset_id: str | None = None
     action_type: str
-    battery_pct: float
+    battery_pct: float | None = None
     status: str
     failure_type: str
-    duration_sec: float
-    scenario: str
+    duration_sec: float | None = None
+    scenario: str | None = None
 
 
 class FindingOut(BaseModel):
     anomaly_id: str
     action_id: str
     mission_id: str
-    location_id: str
-    asset_id: str
-    timestamp: str
+    location_id: str | None = None
+    asset_id: str | None = None
+    timestamp: str | None = None
     anomaly_type: str
     severity: str
     operator_review_required: bool
