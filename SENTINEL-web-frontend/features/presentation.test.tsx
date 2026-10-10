@@ -10,7 +10,7 @@ it("keeps header, finding description and accessible illustration copy clean", a
       <ReviewQueue />
     </AppShell>,
   );
-  expect(screen.queryByText(/synthetic/i)).not.toBeInTheDocument();
+  expect(screen.getByText("Synthetic data")).toBeInTheDocument();
   await userEvent.type(screen.getByRole("searchbox"), "AN014");
   await userEvent.click(
     screen.getByRole("button", { name: /Abnormal temperature/ }),
@@ -21,5 +21,5 @@ it("keeps header, finding description and accessible illustration copy clean", a
   expect(
     screen.getByRole("img", { name: "Illustrative inspection sample" }),
   ).toBeInTheDocument();
-  expect(screen.queryByText(/synthetic/i)).not.toBeInTheDocument();
+  expect(screen.getAllByText(/synthetic/i)).toHaveLength(1);
 });
