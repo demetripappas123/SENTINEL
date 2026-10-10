@@ -1,3 +1,4 @@
+import psycopg
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.canonical import CanonicalBatch
@@ -19,5 +20,5 @@ def post_spot(payload: dict) -> CanonicalBatch:
 def _ingest(call):
     try:
         return call()
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=501, detail="Ingest is not implemented yet") from exc
+    except (psycopg.Error, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail="Database is unavailable") from exc

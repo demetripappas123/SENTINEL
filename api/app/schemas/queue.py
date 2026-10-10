@@ -18,4 +18,10 @@ class QueueItem(BaseModel):
     action_id: str | None = None
     asset_id: str | None = None
     location_id: str | None = None
-    evidence: dict[str, str | float | bool | None] = Field(default_factory=dict)
+    rank: int = 0
+    evidence: dict[str, str | float | int | bool | None] = Field(default_factory=dict)
+
+
+class QueueUpdate(BaseModel):
+    upsert: list[QueueItem] = Field(default_factory=list)
+    remove_ids: list[str] = Field(default_factory=list)

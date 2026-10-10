@@ -1,6 +1,6 @@
 -- SENTINEL canonical tables for Databricks Lakebase (Postgres).
 -- Run this in the Lakebase SQL editor, not a Databricks SQL warehouse.
--- Queue items are computed by the API and are not stored here.
+-- Queue rows are stored separately. Run 002_queue.sql after this file.
 -- Load order: locations, assets, missions, actions, readings, anomaly_claims.
 
 CREATE SCHEMA IF NOT EXISTS sentinel;
