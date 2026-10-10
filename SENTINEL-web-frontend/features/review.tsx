@@ -3,23 +3,43 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
 import {
-  assetName,
   humanize,
-  locationName,
-  pending,
   selectQueue,
   type Configuration,
   type FindingStatus,
 } from "@sentinel/core";
 import type { QueueItem } from "@sentinel/core/api";
-import { Button, ConfigurationControl, Empty, PageHeading, Panel, Tag } from "../components/ui";
+import {
+  Button,
+  ConfigurationControl,
+  Empty,
+  PageHeading,
+  Panel,
+  Tag,
+} from "../components/ui";
+import {
+  equipmentName,
+  issueDescription,
+  missionName,
+  operatorText,
+  placeName,
+} from "../lib/operator-copy";
 import { useReviews } from "../lib/browser-state";
 import { useInspectionData } from "../lib/inspection-data";
 import { useQueue } from "../lib/queue-data";
 
-export function ReviewQueue({ missionId }: { missionId?: string }) {
-  const [configuration, setConfiguration] = useState<Configuration>("ALL");
-  const [status, setStatus] = useState<FindingStatus>(missionId ? "all" : "required");
+export function ReviewQueue({
+  missionId,
+  initialConfiguration = "ALL",
+}: {
+  missionId?: string;
+  initialConfiguration?: Configuration;
+}) {
+  const [configuration, setConfiguration] =
+    useState<Configuration>(initialConfiguration);
+  const [status, setStatus] = useState<FindingStatus>(
+    missionId ? "all" : "required",
+  );
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<QueueItem | null>(null);
   const data = useInspectionData();
@@ -31,20 +51,39 @@ export function ReviewQueue({ missionId }: { missionId?: string }) {
   const items = selectQueue(queue, {
     configuration,
     status,
-    query,
     reviewedIds,
     missionId,
     scenarios,
-  });
+  }).filter((item) =>
+    [
+      equipmentName(data, item.asset_id),
+      placeName(data, item.location_id),
+      missionName(data, item.mission_id),
+      operatorText(humanize(item.cause)),
+      issueDescription(item).summary,
+      item.asset_id,
+      item.location_id,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(query.trim().toLowerCase()),
+  );
   return (
     <>
-      <PageHeading title={missionId ? "Queue · " + missionId : "Review"}>
+      <PageHeading
+        title={
+          missionId ? "Review · " + missionName(data, missionId) : "Review"
+        }
+      >
         <Button className="quiet" onClick={resetReviews}>
           Reset reviews
         </Button>
       </PageHeading>
       <div className="toolbar">
-        <ConfigurationControl value={configuration} onChange={setConfiguration} />
+        <ConfigurationControl
+          value={configuration}
+          onChange={setConfiguration}
+        />
       </div>
       <div className="queue-toolbar">
         <div className="segmented" role="group" aria-label="Queue status">
@@ -70,7 +109,7 @@ export function ReviewQueue({ missionId }: { missionId?: string }) {
           <input
             type="search"
             aria-label="Search queue"
-            placeholder="Asset, waypoint, or cause"
+            placeholder="Equipment, location, or cause"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -78,7 +117,7 @@ export function ReviewQueue({ missionId }: { missionId?: string }) {
       </div>
       <Panel
         title="Queue"
-        action={<span className="small muted">By rank</span>}
+        action={<span className="small muted">Highest priority first</span>}
         className="full-queue"
       >
         <div className="finding-list">
@@ -123,20 +162,31 @@ function QueueRow({
       aria-label={
         humanize(item.verdict) +
         ", " +
-        humanize(item.cause) +
+        operatorText(humanize(item.cause)) +
         ", " +
-        (item.asset_id || item.mission_id) +
+        (equipmentName(data, item.asset_id) +
+          ", " +
+          placeName(data, item.location_id)) +
         (reviewed ? ", reviewed" : "")
       }
     >
       <div className="stack">
-        <strong>{humanize(item.cause)}</strong>
-        <p className="mono">
-          {item.asset_id ? assetName(data, item.asset_id) : "Pending"} ·{" "}
-          {pending(item.location_id)} · {item.mission_id}
+        <strong>{operatorText(humanize(item.cause))}</strong>
+        <p>{issueDescription(item).summary}</p>
+        <p className="small muted">
+          {equipmentName(data, item.asset_id)} ·{" "}
+          {placeName(data, item.location_id)}
         </p>
       </div>
-      <Tag tone={reviewed ? "green" : item.verdict === "inspection_failure" ? "amber" : "blue"}>
+      <Tag
+        tone={
+          reviewed
+            ? "green"
+            : item.verdict === "inspection_failure"
+              ? "amber"
+              : "blue"
+        }
+      >
         {reviewed ? "Reviewed" : humanize(item.verdict)}
       </Tag>
     </button>
@@ -164,6 +214,7 @@ function QueueDialog({
     };
   }, [item]);
   if (!item) return null;
+  const description = issueDescription(item);
   return (
     <dialog
       ref={ref}
@@ -176,26 +227,41 @@ function QueueDialog({
       <header className="dialog-head">
         <div>
           <div className="row">
-            <Tag tone={item.verdict === "inspection_failure" ? "amber" : "blue"}>
+            <Tag
+              tone={item.verdict === "inspection_failure" ? "amber" : "blue"}
+            >
               {humanize(item.verdict)}
             </Tag>
-            <span className="mono muted">Rank {item.rank}</span>
           </div>
-          <h2 id="queue-title">{humanize(item.cause)}</h2>
+          <h2 id="queue-title">{operatorText(humanize(item.cause))}</h2>
         </div>
-        <Button className="quiet square" aria-label="Close queue item" onClick={onClose}>
+        <Button
+          className="quiet square"
+          aria-label="Close queue item"
+          onClick={onClose}
+        >
           <X className="icon" />
         </Button>
       </header>
       <div className="dialog-content">
-        <strong>{item.asset_id ? assetName(data, item.asset_id) : "Pending"}</strong>
+        <strong>{equipmentName(data, item.asset_id)}</strong>
         <p className="small muted">
-          {pending(item.asset_id)} · {pending(item.location_id)} ·{" "}
-          {item.location_id ? locationName(data, item.location_id) : "Pending"}
+          {placeName(data, item.location_id)} ·{" "}
+          {missionName(data, item.mission_id)}
         </p>
-        <p>{item.explanation}</p>
+        <p>{description.summary}</p>
+        {description.context && (
+          <p className="small muted">{description.context}</p>
+        )}
+        <div className="explanation">
+          <strong>Recommended next step</strong>
+          <p>{description.nextStep}</p>
+        </div>
         <div className="row">
-          <Link className="btn" href={"/missions/" + item.mission_id}>
+          <Link
+            className="btn"
+            href={"/missions/" + encodeURIComponent(item.mission_id)}
+          >
             Open mission
           </Link>
           {!reviewed && (

@@ -1,9 +1,21 @@
 "use client";
 import { useState } from "react";
-import { getFindings, humanize, type Configuration, type Finding } from "@sentinel/core";
+import { MapPin } from "lucide-react";
+import {
+  getFindings,
+  humanize,
+  type Configuration,
+  type Finding,
+} from "@sentinel/core";
+import { operatorText, placeName } from "../lib/operator-copy";
 import { FacilityMap } from "../components/facility-map";
 import { FindingDialog, FindingRow } from "../components/findings";
-import { ConfigurationControl, PageHeading, Panel, Tag } from "../components/ui";
+import {
+  ConfigurationControl,
+  PageHeading,
+  Panel,
+  Tag,
+} from "../components/ui";
 import { useReviews } from "../lib/browser-state";
 import { useInspectionData } from "../lib/inspection-data";
 export function Facility() {
@@ -16,10 +28,14 @@ export function Facility() {
     ? waypoint
     : (data.locations[0]?.location_id ?? "");
   const location = data.locations.find((l) => l.location_id === active);
-  const missionIds = new Set(data.missions
-    .filter((m) => configuration === "ALL" || m.scenario === configuration)
-    .map((m) => m.mission_id));
-  const configuredActions = data.actions.filter((a) => missionIds.has(a.mission_id));
+  const missionIds = new Set(
+    data.missions
+      .filter((m) => configuration === "ALL" || m.scenario === configuration)
+      .map((m) => m.mission_id),
+  );
+  const configuredActions = data.actions.filter((a) =>
+    missionIds.has(a.mission_id),
+  );
   const actions = configuredActions.filter((a) => a.location_id === active);
   const findings = getFindings(data, { configuration, status: "all" }).filter(
     (f) => f.location_id === active,
@@ -28,24 +44,35 @@ export function Facility() {
     <>
       <PageHeading title="Facility" />
       <div className="toolbar">
-        <ConfigurationControl value={configuration} onChange={setConfiguration} />
+        <ConfigurationControl
+          value={configuration}
+          onChange={setConfiguration}
+        />
         <Tag>Illustrative layout · 2 floors</Tag>
       </div>
       <div className="facility-layout">
         <Panel
           title="Floor plan"
-          action={<span className="small muted">{data.locations.length} waypoints</span>}
+          action={
+            <span className="small muted">
+              {data.locations.length} waypoints
+            </span>
+          }
         >
           <div className="map-wrap">
             <FacilityMap selected={active} onSelect={setWaypoint} />
           </div>
           <div className="location-note">
-            <span className="location-number">{active}</span>
+            <span className="location-number">
+              {/^WP\d+$/.test(active) ? active : <MapPin className="icon" />}
+            </span>
             <div>
-              <h2>{location ? location.location_name : "No locations"}</h2>
+              <h2>{location ? placeName(data, active) : "No locations"}</h2>
               <p>
                 {location
-                  ? humanize(location.environment) + " · Floor " + location.floor
+                  ? operatorText(humanize(location.environment)) +
+                    " · Floor " +
+                    location.floor
                   : "No stored locations"}
               </p>
             </div>
@@ -90,11 +117,20 @@ export function Facility() {
                   "waypoint-row " + (l.location_id === active ? "active" : "")
                 }
                 aria-pressed={l.location_id === waypoint}
-                aria-label={l.location_id + " " + l.location_name}
+                aria-label={
+                  (/^WP\d+$/.test(l.location_id) ? l.location_id + " " : "") +
+                  placeName(data, l.location_id)
+                }
                 onClick={() => setWaypoint(l.location_id)}
               >
-                <span className="mono">{l.location_id}</span>
-                <span>{l.location_name}</span>
+                <span className="mono">
+                  {/^WP\d+$/.test(l.location_id) ? (
+                    l.location_id
+                  ) : (
+                    <MapPin className="icon" />
+                  )}
+                </span>
+                <span>{placeName(data, l.location_id)}</span>
                 <Tag tone={failed ? "amber" : "green"}>{failed} failed</Tag>
               </button>
             );

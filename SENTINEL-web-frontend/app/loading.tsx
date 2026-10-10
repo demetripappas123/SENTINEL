@@ -1,7 +1,2 @@
-export default function Loading() {
-  return (
-    <div className="py-8 text-sm text-muted-foreground" role="status">
-      Loading inspections…
-    </div>
-  );
-}
+import { DataLoading } from "../components/data-boundary";
+export default DataLoading;

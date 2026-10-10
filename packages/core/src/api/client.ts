@@ -84,9 +84,12 @@ function isVersionMetric(value: unknown): value is VersionMetric {
     typeof value.source === "string" &&
     isTextOrNull(value.configuration_version) &&
     isTextOrNull(value.scenario) &&
-    ["mission_count", "completed_missions", "action_count", "successful_actions"].every(
-      (key) => typeof value[key] === "number",
-    ) &&
+    [
+      "mission_count",
+      "completed_missions",
+      "action_count",
+      "successful_actions",
+    ].every((key) => typeof value[key] === "number") &&
     [
       "mission_completion_pct",
       "action_success_pct",
@@ -113,10 +116,15 @@ function isLocationMetric(value: unknown): value is LocationMetric {
     ["source", "location_id", "location_name"].every(
       (key) => typeof value[key] === "string",
     ) &&
-    ["action_count", "successful_actions", "navigation_count", "navigation_failures"].every(
-      (key) => typeof value[key] === "number",
-    ) &&
-    ["success_pct", "navigation_failure_pct"].every((key) => isNumberOrNull(value[key]))
+    [
+      "action_count",
+      "successful_actions",
+      "navigation_count",
+      "navigation_failures",
+    ].every((key) => typeof value[key] === "number") &&
+    ["success_pct", "navigation_failure_pct"].every((key) =>
+      isNumberOrNull(value[key]),
+    )
   );
 }
 function isBatteryMetric(value: unknown): value is BatteryMetric {
@@ -146,7 +154,7 @@ function isOperationalMetrics(value: unknown): value is OperationalMetrics {
     missions.failed_mission_ids.every((id) => typeof id === "string")
   );
 }
-function isQueueItem(value: unknown): value is QueueItem {
+export function isQueueItem(value: unknown): value is QueueItem {
   if (!isRecord(value)) return false;
   return (
     ["id", "cause", "explanation", "mission_id"].every(
@@ -173,7 +181,13 @@ function isFlatRecord(value: unknown): boolean {
   );
 }
 
-type FieldType = "string" | "number" | "boolean" | "flat" | "string?" | "number?";
+type FieldType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "flat"
+  | "string?"
+  | "number?";
 const s = "string",
   n = "number",
   b = "boolean",
@@ -261,7 +275,9 @@ function fieldMatches(value: unknown, type: FieldType): boolean {
   return typeof value === type;
 }
 
-function isInspectionDataset(value: unknown): value is InspectionDataset {
+export function isInspectionDataset(
+  value: unknown,
+): value is InspectionDataset {
   if (!isRecord(value)) return false;
   return Object.entries(DATASET_FIELDS).every(([collection, fields]) => {
     const records = value[collection];
@@ -292,7 +308,9 @@ export function createApiClient(
       throw new Error("SENTINEL API request failed (" + response.status + ")");
     return response.json();
   }
-  async function getDataset(source: DataSource = "kit"): Promise<InspectionDataset> {
+  async function getDataset(
+    source: DataSource = "kit",
+  ): Promise<InspectionDataset> {
     const value = await request("/dataset?source=" + source);
     if (!isInspectionDataset(value))
       throw new Error("Invalid dataset response");
@@ -324,7 +342,8 @@ export function createApiClient(
     },
     async getMetrics(): Promise<OperationalMetrics> {
       const value = await request("/metrics");
-      if (!isOperationalMetrics(value)) throw new Error("Invalid metrics response");
+      if (!isOperationalMetrics(value))
+        throw new Error("Invalid metrics response");
       return value;
     },
     async getHealth(): Promise<{ status: "ok" }> {
