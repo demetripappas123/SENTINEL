@@ -4,21 +4,21 @@ import Image from "next/image";
 import { useInspectionData } from "../lib/inspection-data";
 
 const points: Record<string, [number, number]> = {
-  WP01: [10, 76],
-  WP02: [10, 52],
-  WP03: [23, 38],
-  WP04: [20, 14],
-  WP05: [41, 36],
-  WP06: [51, 14],
-  WP07: [61, 46],
-  WP08: [35, 67],
-  WP09: [50, 67],
-  WP10: [61, 70],
-  WP11: [78, 22],
-  WP12: [91, 23],
-  WP13: [77, 53],
-  WP14: [91, 58],
-  WP15: [82, 79],
+  WP01: [8.3, 75.7],
+  WP02: [8.6, 52.2],
+  WP03: [21.4, 40.3],
+  WP04: [19.0, 14.8],
+  WP05: [39.5, 38.3],
+  WP06: [50.1, 14.8],
+  WP07: [60.3, 46.3],
+  WP08: [31.9, 68.6],
+  WP09: [48.4, 68.5],
+  WP10: [60.3, 69.9],
+  WP11: [76.9, 23.5],
+  WP12: [91.2, 23.5],
+  WP13: [76.0, 51.9],
+  WP14: [90.0, 54.3],
+  WP15: [82.3, 76.6],
 };
 export function FacilityMap({
   selected,
@@ -31,10 +31,10 @@ export function FacilityMap({
   return (
     <div className="map-graphic">
       <Image
-        src="/demo/facility.png"
+        src="/demo/facility.jpg"
         alt="Illustrative fictional facility floor plan"
-        width={1095}
-        height={593}
+        width={1024}
+        height={540}
         unoptimized
       />
       {data.locations.map((l) => (

@@ -4,16 +4,24 @@ import { AppShell } from "../components/app-shell";
 import { InspectionDataProvider } from "../lib/inspection-data";
 import { QueueProvider } from "../lib/queue-data";
 import "./globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
 export const metadata: Metadata = {
-  title: "SENTINEL | SPOT operations",
+  title: "SENTINEL | SPOT Operations",
   description:
-    "Mission reliability and inspection triage for the NextEra challenge.",
+    "Mission reliability and inspection triage for NextEra Energy.",
 };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" data-theme="light">
+    <html lang="en" data-theme="light" className={cn("font-sans", geist.variable)}>
       <body>
-        <a href="#main" className="skip-link">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-background focus:px-3 focus:py-2"
+        >
           Skip to content
         </a>
         <InspectionDataProvider>

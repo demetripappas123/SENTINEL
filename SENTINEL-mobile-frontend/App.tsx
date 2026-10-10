@@ -59,7 +59,7 @@ function AppScreen() {
         }
       }
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.sidebar }}>
         <StatusBar style={theme === "light" ? "dark" : "light"} />
         <View
           style={{ flex: 1 }}
@@ -143,7 +143,12 @@ function AppScreen() {
           <View
             style={[
               layout.row,
-              { padding: 8, borderTopWidth: 1, borderColor: colors.line },
+              {
+                padding: 8,
+                borderTopWidth: 1,
+                borderColor: colors.line,
+                backgroundColor: colors.sidebar,
+              },
             ]}
           >
             {(

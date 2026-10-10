@@ -53,7 +53,7 @@ export function Attention({
         <View style={{ flexDirection: "row", alignItems: "baseline", gap: 10 }}>
           <Text
             style={{
-              color: colors.blue,
+              color: colors.navy,
               fontSize: 38,
               fontWeight: "600",
               letterSpacing: -1,
@@ -125,7 +125,7 @@ export function Attention({
           style={{
             borderLeftWidth: 3,
             borderLeftColor:
-              item.verdict === "inspection_failure" ? colors.amber : colors.blue,
+              item.verdict === "inspection_failure" ? colors.yellow : colors.navy,
           }}
         >
           <View style={layout.row}>
@@ -194,7 +194,7 @@ export function MissionHistory({
           return (
             <Card key={m.mission_id} colors={colors}>
               <View style={layout.row}>
-                <Text style={[layout.mono, { color: colors.blue }]}>
+                <Text style={[layout.mono, { color: colors.navy }]}>
                   {m.mission_id}
                 </Text>
                 <Badge
@@ -271,7 +271,7 @@ export function FacilityScreen({
         resizeMode="contain"
       />
       <Card colors={colors}>
-        <Text style={[layout.mono, { color: colors.blue }]}>{waypoint}</Text>
+        <Text style={[layout.mono, { color: colors.navy }]}>{waypoint}</Text>
         <Text
           accessibilityRole="header"
           style={[layout.title, { color: colors.ink }]}
@@ -297,15 +297,31 @@ export function FacilityScreen({
             borderBottomWidth: 1,
             borderColor: colors.line,
             backgroundColor:
-              l.location_id === waypoint ? colors.blueSoft : colors.surface,
+              l.location_id === waypoint ? colors.navy : colors.surface,
             flexDirection: "row",
             gap: 10,
           }}
         >
-          <Text style={[layout.mono, { color: colors.blue }]}>
+          <Text
+            style={[
+              layout.mono,
+              {
+                color:
+                  l.location_id === waypoint ? colors.onNavy : colors.navy,
+              },
+            ]}
+          >
             {l.location_id}
           </Text>
-          <Text style={[layout.small, { color: colors.ink, flex: 1 }]}>
+          <Text
+            style={[
+              layout.small,
+              {
+                color: l.location_id === waypoint ? colors.onNavy : colors.ink,
+                flex: 1,
+              },
+            ]}
+          >
             {l.location_name}
           </Text>
         </Pressable>

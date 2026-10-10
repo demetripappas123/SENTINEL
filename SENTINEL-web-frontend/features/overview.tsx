@@ -64,6 +64,8 @@ export function Overview() {
   const active = data.locations.some((l) => l.location_id === waypoint)
     ? waypoint
     : (data.locations[0]?.location_id ?? "");
+  const rateTone = (rate: number) =>
+    rate >= 80 ? "good" : rate >= 50 ? "mid" : "bad";
   const cards = [
     {
       label: "Mission completion",
@@ -72,7 +74,7 @@ export function Overview() {
       note:
         metrics.completedCount + " / " + metrics.missionCount + " completed",
       icon: CheckCheck,
-      tone: "good",
+      tone: rateTone(metrics.completionRate),
     },
     {
       label: "Action success",
@@ -81,21 +83,21 @@ export function Overview() {
       note:
         metrics.successfulActionCount + " / " + metrics.actionCount + " passed",
       icon: Activity,
-      tone: "",
+      tone: rateTone(metrics.actionSuccessRate),
     },
     {
       label: "To review",
       value: queued.length,
       note: inspectionFailures + " inspection failures",
       icon: TriangleAlert,
-      tone: "caution",
+      tone: inspectionFailures > 0 ? "bad" : queued.length > 0 ? "mid" : "good",
     },
     {
       label: "Findings",
       value: findings.length,
       note: data.locations.length + " waypoints · " + data.assets.length + " assets",
       icon: ScanLine,
-      tone: "",
+      tone: findings.length === 0 ? "good" : "mid",
     },
   ];
   return (

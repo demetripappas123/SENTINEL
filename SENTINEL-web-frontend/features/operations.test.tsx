@@ -39,7 +39,7 @@ describe("dashboard workflows", () => {
   it("changes operational metrics when selecting V2", async () => {
     renderStored(<Overview />);
     await userEvent.click(
-      screen.getByRole("button", { name: "Improved configuration" }),
+      screen.getByRole("radio", { name: "Improved configuration" }),
     );
     expect(screen.getByText("100.0")).toBeInTheDocument();
     expect(screen.getByText("91.1")).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe("dashboard workflows", () => {
     renderStored(<Facility />);
     expect(screen.getByText("43")).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: "Improved configuration" }),
+      screen.getByRole("radio", { name: "Improved configuration" }),
     );
     expect(screen.queryByText("43")).not.toBeInTheDocument();
     expect(screen.getByText("Actions").parentElement).toHaveTextContent("9");
@@ -103,7 +103,7 @@ describe("dashboard workflows", () => {
     renderStored(<Replay />);
     fireEvent.change(screen.getByRole("slider"), { target: { value: "499" } });
     await userEvent.click(
-      screen.getByRole("button", { name: "Improved configuration" }),
+      screen.getByRole("radio", { name: "Improved configuration" }),
     );
     expect(screen.getAllByText("M019").length).toBeGreaterThan(0);
     expect(screen.getByText("1 / 104")).toBeInTheDocument();

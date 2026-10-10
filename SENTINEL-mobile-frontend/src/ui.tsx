@@ -43,9 +43,9 @@ export function Button({
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: green
-          ? colors.greenFill
+          ? colors.green
           : selected
-            ? colors.blueSoft
+            ? colors.navy
             : colors.surface,
         opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
       })}
@@ -54,7 +54,11 @@ export function Button({
         style={{
           fontSize: 12,
           fontWeight: "600",
-          color: green ? "#214631" : selected ? colors.blue : colors.ink,
+          color: green
+            ? colors.onStatus
+            : selected
+              ? colors.onNavy
+              : colors.ink,
         }}
       >
         {label}
@@ -74,28 +78,28 @@ export function Badge({
   const tone = ["CRITICAL", "HIGH"].includes(severity)
     ? "red"
     : severity === "MEDIUM"
-      ? "amber"
+      ? "yellow"
       : severity === "SUCCESS"
         ? "green"
-        : "blue";
+        : "navy";
   return (
     <View
       style={{
         borderRadius: 3,
         paddingHorizontal: 7,
         paddingVertical: 4,
-        backgroundColor:
-          colors[
-            (tone + "Soft") as
-              | "redSoft"
-              | "amberSoft"
-              | "greenSoft"
-              | "blueSoft"
-          ],
+        backgroundColor: colors[tone],
         alignSelf: "flex-start",
       }}
     >
-      <Text style={{ fontSize: 11, color: colors[tone] }}>{label}</Text>
+      <Text
+        style={{
+          fontSize: 11,
+          color: tone === "yellow" ? colors.ink : colors.onStatus,
+        }}
+      >
+        {label}
+      </Text>
     </View>
   );
 }

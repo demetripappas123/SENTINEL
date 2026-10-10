@@ -191,7 +191,7 @@ export function EvidenceSheet({
                     {shortTime(selectedAction.timestamp)}
                   </Text>
                   {selectedAction.status === "FAILED" && (
-                    <Text style={{ color: colors.amber, fontWeight: "600" }}>
+                    <Text style={{ color: colors.yellow, fontWeight: "600" }}>
                       {selectedAction.failure_type
                         ? humanize(selectedAction.failure_type)
                         : "Pending"}
