@@ -9,6 +9,8 @@ import type {
 
 export * from "./types";
 export * from "./theme";
+export * from "./repository";
+export * from "./inspection-selectors";
 export const dataset: InspectionDataset = challenge;
 
 export function getMetrics(
