@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Palantir product layout, with softer SENTINEL blue and green intents. */
 :root {
   --bg: #f5f7fa;
   --surface: #fff;
