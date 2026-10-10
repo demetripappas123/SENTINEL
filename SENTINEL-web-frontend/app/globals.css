@@ -981,6 +981,33 @@ input::placeholder {
   font-weight: 600;
   font: 12px var(--mono);
 }
+.api-queue-list {
+  display: flex;
+  flex-direction: column;
+}
+.api-queue-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--faint);
+}
+.api-queue-item:last-child {
+  border-bottom: 0;
+}
+.api-queue-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.api-queue-item > p {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.api-queue-evidence {
+  margin: 8px 0 0;
+  overflow: auto;
+  font: 11px var(--mono);
+  white-space: pre-wrap;
+}
 .inspector-section {
   font-size: 10px;
   text-transform: uppercase;

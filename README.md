@@ -42,7 +42,7 @@ Both apps currently use the supplied synthetic challenge data. Regenerate fixtur
 
 Review acknowledgment is local: a browser session for web, the running app session for mobile. It does not update FastAPI or a database. Images are kit illustrations rather than evidence associated with individual records; waypoint pins are illustrative rather than coordinates.
 
-`packages/core/src/api/client.ts` provides a typed, response-validated client for the existing FastAPI `GET /health` and `GET /queue`. Instantiate it with the backend base URL when wiring live data. API queue verdicts differ from raw challenge findings; that integration needs an explicit mapping. No backend persistence, authentication, or robot controls are added here.
+`packages/core/src/api/client.ts` provides a typed, response-validated client for the existing FastAPI `GET /health` and `GET /queue`. To load the live queue in the web Review screen, set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` in `SENTINEL-web-frontend/.env.local`, start the API, then use **Load queue**. The API's queue verdicts and records remain separate from the fixture-backed challenge findings; no mapping, backend persistence, authentication, or robot controls are added here.
 
 ## Next iterations
 

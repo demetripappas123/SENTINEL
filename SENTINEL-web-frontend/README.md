@@ -10,4 +10,4 @@ npm test -w @sentinel/web
 
 `app/` owns routes and loading/error/not-found boundaries. `features/` owns screen behavior; `components/` owns reusable panels and evidence UI. `lib/browser-state.ts` owns local theme and session review state.
 
-Data and business rules come from `@sentinel/core`. The current screens deliberately use the challenge fixture; the initial API client is separate until live endpoints and mapping are agreed. See the [root README](../README.md).
+Data and business rules come from `@sentinel/core`. The Review screen can load the live FastAPI queue using the typed client. Set `NEXT_PUBLIC_API_BASE_URL` in this directory's `.env.local` (for local development, `http://localhost:8000`) and restart `npm run dev:web` after changing it. The API must be running and allow requests from `http://localhost:3000`; the existing fixture-backed findings remain separate from the API queue. See the [root README](../README.md).

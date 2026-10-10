@@ -16,6 +16,7 @@ import {
   Panel,
 } from "../components/ui";
 import { FindingDialog, FindingRow } from "../components/findings";
+import { ApiQueuePanel } from "../components/api-queue";
 import { useReviews } from "../lib/browser-state";
 
 export function ReviewQueue({ missionId }: { missionId?: string }) {
@@ -40,6 +41,7 @@ export function ReviewQueue({ missionId }: { missionId?: string }) {
           Reset reviews
         </Button>
       </PageHeading>
+      <ApiQueuePanel missionId={missionId} />
       <div className="toolbar">
         <ConfigurationControl
           value={configuration}
