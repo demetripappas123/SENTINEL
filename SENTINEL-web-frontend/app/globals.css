@@ -564,7 +564,9 @@ small,
 .nav-current {
   color: var(--foreground);
   font-weight: 600;
-  box-shadow: inset 0 0 0 1px var(--brand);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: inset 0 -2px 0 var(--brand);
 }
 .metric-value {
   font-size: 38px;
@@ -672,7 +674,7 @@ small,
   width: 100%;
   max-width: 480px;
   margin: auto;
-  aspect-ratio: 1024 / 540;
+  aspect-ratio: 1024 / 539;
 }
 .map-graphic img {
   display: block;
