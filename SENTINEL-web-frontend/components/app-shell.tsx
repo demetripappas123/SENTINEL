@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { dataset, getFindings } from "@sentinel/core";
 import { useReviews, useTheme } from "../lib/browser-state";
-import { Button, Tag } from "./ui";
+import { Button } from "./ui";
 
 const navigation = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -48,7 +48,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="top-divider" />
         <span className="breadcrumb">NextEra / SPOT</span>
         <span className="spacer" />
-        <Tag>Synthetic data</Tag>
         <Button
           className="quiet square"
           onClick={toggleTheme}

@@ -8,6 +8,7 @@ import {
   assetName,
   dataset,
   humanize,
+  formatFindingDescription,
   locationName,
   sampleImage,
   shortTime,
@@ -68,7 +69,7 @@ export function Capture({ type }: { type: string }) {
       <figure>
         <Image
           src={"/demo/" + sampleImage(type)}
-          alt="Illustrative inspection sample from the synthetic challenge kit"
+          alt="Illustrative inspection sample"
           width={640}
           height={360}
           unoptimized
@@ -171,6 +172,9 @@ export function FindingDialog({
         ) : (
           <p className="panel-body small muted">No reading recorded.</p>
         )}
+        <p className="small muted">
+          {formatFindingDescription(finding.description)}
+        </p>
       </div>
       <footer className="dialog-foot">
         <p>Review state: this session</p>

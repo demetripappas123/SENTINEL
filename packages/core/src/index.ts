@@ -11,6 +11,7 @@ export * from "./types";
 export * from "./theme";
 export * from "./repository";
 export * from "./inspection-selectors";
+export * from "./presentation";
 export const dataset: InspectionDataset = challenge;
 
 export function getMetrics(

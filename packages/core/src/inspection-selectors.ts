@@ -70,3 +70,61 @@ export function selectActionReadings(
 ) {
   return data.readings.filter((reading) => reading.action_id === actionId);
 }
+
+export function selectFindingSummary(data: InspectionDataset) {
+  const total = data.findings.length;
+  return {
+    total,
+    severities: ["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((severity) => ({
+      severity,
+      count: data.findings.filter((f) => f.severity === severity).length,
+    })),
+    types: [
+      { label: "Visual", types: ["VISUAL_DEFECT", "GAUGE_OUT_OF_RANGE"] },
+      { label: "Thermal", types: ["ABNORMAL_TEMPERATURE"] },
+      {
+        label: "Navigation",
+        types: ["NAVIGATION_OBSTRUCTION", "LOCALIZATION_ISSUE"],
+      },
+      { label: "Signal", types: ["SIGNAL_DEGRADATION", "ABNORMAL_VIBRATION"] },
+    ].map((group) => {
+      const count = data.findings.filter((f) =>
+        group.types.includes(f.anomaly_type),
+      ).length;
+      return {
+        ...group,
+        count,
+        share: total ? Math.round((count / total) * 1000) / 10 : 0,
+      };
+    }),
+  };
+}
+
+export function selectDailyMetrics(data: InspectionDataset) {
+  return [...new Set(data.missions.map((m) => m.start_time.slice(0, 10)))]
+    .sort()
+    .map((date) => {
+      const missions = data.missions.filter((m) =>
+        m.start_time.startsWith(date),
+      );
+      const ids = new Set(missions.map((m) => m.mission_id));
+      const actions = data.actions.filter((a) => ids.has(a.mission_id));
+      return {
+        date,
+        runs: missions.length,
+        averageDuration:
+          missions.reduce((sum, mission) => sum + mission.duration_min, 0) /
+          missions.length,
+        actionSuccess: actions.length
+          ? (actions.filter((a) => a.status === "SUCCESS").length /
+              actions.length) *
+            100
+          : 0,
+        completion: missions.length
+          ? (missions.filter((m) => m.mission_status === "COMPLETED").length /
+              missions.length) *
+            100
+          : 0,
+      };
+    });
+}

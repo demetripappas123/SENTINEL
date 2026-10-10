@@ -5,7 +5,27 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "ios": { "supportsTablet": true },
-    "android": { "package": "com.sentinel.inspections" }
+    "ios": {
+      "bundleIdentifier": "com.sentinel.inspections",
+      "supportsTablet": false,
+      "infoPlist": {
+        "EXDevMenuShowFloatingActionButton": false
+      }
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f5f8fc",
+          "dark": {
+            "backgroundColor": "#131d2c"
+          }
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "platforms": [
+      "ios"
+    ]
   }
 }
