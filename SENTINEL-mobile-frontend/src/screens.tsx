@@ -3,6 +3,7 @@ import {
   assetName,
   humanize,
   missionActions,
+  missionLabel,
   pending,
   selectQueue,
   shortTime,
@@ -188,7 +189,8 @@ export function MissionHistory({
         .reverse()
         .map((m) => {
           const actions = missionActions(data, m.mission_id),
-            passed = actions.filter((a) => a.status === "SUCCESS").length;
+            passed = actions.filter((a) => a.status === "SUCCESS").length,
+            label = missionLabel(m);
           return (
             <Card key={m.mission_id} colors={colors}>
               <View style={layout.row}>
@@ -196,22 +198,32 @@ export function MissionHistory({
                   {m.mission_id}
                 </Text>
                 <Badge
-                  label={humanize(m.mission_status)}
+                  label={humanize(label)}
                   severity={
-                    m.mission_status === "COMPLETED" ? "SUCCESS" : "CRITICAL"
+                    label === "COMPLETED"
+                      ? "SUCCESS"
+                      : label === "FAILED"
+                        ? "CRITICAL"
+                        : label === "IN_PROGRESS"
+                          ? "MEDIUM"
+                          : "LOW"
                   }
                   colors={colors}
                 />
               </View>
               <Text style={[layout.title, { color: colors.ink }]}>
-                Route {Number(m.mission_id.slice(1))}
+                {/^M\d+$/.test(m.mission_id)
+                  ? "Route " + Number(m.mission_id.slice(1))
+                  : m.mission_name}
               </Text>
               <View style={layout.row}>
                 <Text style={[layout.small, { color: colors.muted }]}>
                   {shortTime(m.start_time)}
                 </Text>
                 <Text style={[layout.small, { color: colors.ink }]}>
-                  {passed} / {actions.length} passed
+                  {actions.length === 0
+                    ? "No actions"
+                    : passed + " / " + actions.length + " passed"}
                 </Text>
               </View>
               {passed < actions.length && (

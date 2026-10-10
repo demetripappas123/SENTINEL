@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   humanize,
   missionActions,
+  missionLabel,
   pending,
   shortTime,
   type Mission,
@@ -34,7 +35,8 @@ export function MissionTable({
         <tbody>
           {missions.map((m) => {
             const actions = missionActions(data, m.mission_id),
-              passed = actions.filter((a) => a.status === "SUCCESS").length;
+              passed = actions.filter((a) => a.status === "SUCCESS").length,
+              label = missionLabel(m);
             return (
               <tr key={m.mission_id}>
                 <td>
@@ -55,23 +57,37 @@ export function MissionTable({
                 </td>
                 <td>
                   <Tag
-                    tone={m.mission_status === "COMPLETED" ? "green" : "red"}
+                    tone={
+                      label === "COMPLETED"
+                        ? "green"
+                        : label === "FAILED"
+                          ? "red"
+                          : label === "IN_PROGRESS"
+                            ? "amber"
+                            : ""
+                    }
                   >
-                    {humanize(m.mission_status)}
+                    {humanize(label)}
                   </Tag>
                 </td>
                 <td className="number">
-                  <span className="mono">
-                    {passed}/{actions.length}
-                  </span>
-                  <div className="mini-progress" aria-hidden="true">
-                    {actions.map((a) => (
-                      <i
-                        key={a.action_id}
-                        className={a.status === "FAILED" ? "failed" : ""}
-                      />
-                    ))}
-                  </div>
+                  {actions.length === 0 ? (
+                    <span className="muted small">No actions</span>
+                  ) : (
+                    <>
+                      <span className="mono">
+                        {passed}/{actions.length}
+                      </span>
+                      <div className="mini-progress" aria-hidden="true">
+                        {actions.map((a) => (
+                          <i
+                            key={a.action_id}
+                            className={a.status === "FAILED" ? "failed" : ""}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </td>
                 <td>
                   {full ? (
@@ -82,6 +98,8 @@ export function MissionTable({
                           (m.scenario ? humanize(m.scenario) : "—")
                         : "—"}
                     </Tag>
+                  ) : actions.length === 0 ? (
+                    <span className="muted small">No actions</span>
                   ) : actions.length > passed ? (
                     <Tag tone="amber">{actions.length - passed} failed</Tag>
                   ) : (

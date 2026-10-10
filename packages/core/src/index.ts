@@ -107,6 +107,15 @@ export function getFindings(
     );
 }
 
+export function missionLabel(mission: {
+  mission_status: string;
+  start_time: string | null;
+  end_time: string | null;
+}): string {
+  if (mission.end_time || mission.mission_status === "FAILED")
+    return mission.mission_status;
+  return mission.start_time ? "IN_PROGRESS" : "PENDING";
+}
 export const humanize = (value: string) =>
   value
     .toLowerCase()

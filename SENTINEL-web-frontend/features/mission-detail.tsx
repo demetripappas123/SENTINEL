@@ -6,6 +6,7 @@ import {
   humanize,
   locationName,
   missionActions,
+  missionLabel,
   pending,
   shortTime,
 } from "@sentinel/core";
@@ -24,12 +25,13 @@ export function MissionDetail({ missionId }: { missionId: string }) {
   const selected =
     actions.find((a) => a.action_id === selectedId) || actions[0];
   if (!ready) return <p>Loading mission.</p>;
-  if (!mission || !selected) return <p>Mission unavailable.</p>;
+  if (!mission) return <p>Mission unavailable.</p>;
   const passed = actions.filter((a) => a.status === "SUCCESS").length;
-  const readings = data.readings.filter(
-    (r) => r.action_id === selected.action_id,
-  );
-  const findings = actionFindings(data, selected.action_id);
+  const label = missionLabel(mission);
+  const readings = selected
+    ? data.readings.filter((r) => r.action_id === selected.action_id)
+    : [];
+  const findings = selected ? actionFindings(data, selected.action_id) : [];
   return (
     <>
       <PageHeading
@@ -54,8 +56,18 @@ export function MissionDetail({ missionId }: { missionId: string }) {
       <div className="summary-band">
         <div className="datum">
           <span className="small muted">Status</span>
-          <Tag tone={mission.mission_status === "COMPLETED" ? "green" : "red"}>
-            {humanize(mission.mission_status)}
+          <Tag
+            tone={
+              label === "COMPLETED"
+                ? "green"
+                : label === "FAILED"
+                  ? "red"
+                  : label === "IN_PROGRESS"
+                    ? "amber"
+                    : ""
+            }
+          >
+            {humanize(label)}
           </Tag>
         </div>
         <div className="datum">
@@ -107,12 +119,19 @@ export function MissionDetail({ missionId }: { missionId: string }) {
                 </tr>
               </thead>
               <tbody>
+                {actions.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="muted">
+                      No actions yet.
+                    </td>
+                  </tr>
+                )}
                 {actions.map((a) => (
                   <tr
                     key={a.action_id}
                     className={
                       "action-row " +
-                      (selected.action_id === a.action_id ? "selected" : "")
+                      (selected?.action_id === a.action_id ? "selected" : "")
                     }
                   >
                     <td className="mono muted">
@@ -123,7 +142,7 @@ export function MissionDetail({ missionId }: { missionId: string }) {
                     <td>
                       <button
                         className="action-select"
-                        aria-pressed={a.action_id === selected.action_id}
+                        aria-pressed={a.action_id === selected?.action_id}
                         onClick={() => setSelectedId(a.action_id)}
                         aria-label={humanize(a.action_type) + " " + a.action_id}
                       >
@@ -150,6 +169,7 @@ export function MissionDetail({ missionId }: { missionId: string }) {
             </table>
           </div>
         </Panel>
+        {selected ? (
         <aside className="panel action-inspector" aria-label="Action evidence">
           <header className="panel-head">
             <h2>Evidence</h2>
@@ -229,6 +249,14 @@ export function MissionDetail({ missionId }: { missionId: string }) {
             <p className="panel-body small muted">No reading recorded.</p>
           )}
         </aside>
+        ) : (
+          <aside className="panel action-inspector" aria-label="Action evidence">
+            <header className="panel-head">
+              <h2>Evidence</h2>
+            </header>
+            <p className="panel-body small muted">No actions yet.</p>
+          </aside>
+        )}
       </div>
     </>
   );
