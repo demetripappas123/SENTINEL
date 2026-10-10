@@ -1,20 +1,32 @@
+import { useId, useState } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
-import Svg, { Circle, Path, Rect } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  LinearGradient,
+  Path,
+  Rect,
+  Stop,
+} from "react-native-svg";
 import {
   getMetrics,
   selectDailyMetrics,
   selectFindingSummary,
   type InspectionDataset,
-  type ThemeColors,
 } from "@sentinel/core";
-import { Icon } from "../../design/icons";
+import { Icon, type IconName } from "../../design/icons";
+import {
+  fonts,
+  radii,
+  severityColor,
+  typography,
+  type Theme,
+} from "../../design/tokens";
+import { Card, Panel } from "../../ui";
 
-const tones = {
-  CRITICAL: "#d1484e",
-  HIGH: "#f38a27",
-  MEDIUM: "#ffd358",
-  LOW: "#55bd85",
-};
+const SPARK_HEIGHT = 26;
+
+/** Daily trend under each metric, drawn like the web's performance chart. */
 export function Sparkline({
   values,
   color,
@@ -24,48 +36,65 @@ export function Sparkline({
   color: string;
   bars?: boolean;
 }) {
+  const [width, setWidth] = useState(0);
+  const gradient = useId();
   const max = Math.max(...values, 1),
     min = Math.min(...values, 0);
-  const ys = values.map((n) => 30 - ((n - min) / (max - min || 1)) * 25);
+  const y = (n: number) =>
+    SPARK_HEIGHT - 2 - ((n - min) / (max - min || 1)) * (SPARK_HEIGHT - 6);
+  const x = (i: number) =>
+    values.length > 1 ? 1 + (i * (width - 2)) / (values.length - 1) : width / 2;
+  const line = values
+    .map((n, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(n).toFixed(1)}`)
+    .join(" ");
+  const step = values.length ? width / values.length : 0;
   return (
-    <Svg width={40} height={34} viewBox="0 0 40 34" accessible={false}>
-      {bars ? (
-        values.map((value, i) => (
-          <Rect
-            key={i}
-            x={i * (40 / values.length)}
-            y={ys[i]}
-            width={Math.max(2, 40 / values.length - 2)}
-            height={34 - ys[i]}
-            fill={color}
-            opacity={0.35 + (i / values.length) * 0.5}
-          />
-        ))
-      ) : (
-        <>
-          <Path
-            d={ys
-              .map(
-                (y, i) =>
-                  `${i ? "L" : "M"}${(i * 38) / Math.max(1, ys.length - 1)} ${y}`,
-              )
-              .join(" ")}
-            fill="none"
-            stroke={color}
-            strokeWidth={1.2}
-          />
-          {ys.map((y, i) => (
-            <Circle
-              key={i}
-              cx={(i * 38) / Math.max(1, ys.length - 1)}
-              cy={y}
-              r={1.3}
-              fill={color}
-            />
-          ))}
-        </>
+    <View
+      onLayout={({ nativeEvent }) => setWidth(nativeEvent.layout.width)}
+      style={{ height: SPARK_HEIGHT, marginTop: 10 }}
+      pointerEvents="none"
+    >
+      {width > 0 && values.length > 0 && (
+        <Svg width={width} height={SPARK_HEIGHT} accessible={false}>
+          <Defs>
+            <LinearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={color} stopOpacity={0.22} />
+              <Stop offset="1" stopColor={color} stopOpacity={0.02} />
+            </LinearGradient>
+          </Defs>
+          {bars ? (
+            values.map((value, i) => (
+              <Rect
+                key={i}
+                x={i * step + 1}
+                y={y(value)}
+                width={Math.max(2, step - 3)}
+                height={SPARK_HEIGHT - y(value)}
+                rx={1.5}
+                fill={color}
+                opacity={0.3 + (i / values.length) * 0.6}
+              />
+            ))
+          ) : (
+            <>
+              {values.length > 1 && (
+                <Path
+                  d={`${line} L${x(values.length - 1)} ${SPARK_HEIGHT} L${x(0)} ${SPARK_HEIGHT} Z`}
+                  fill={`url(#${gradient})`}
+                />
+              )}
+              <Path
+                d={line}
+                fill="none"
+                stroke={color}
+                strokeWidth={1.75}
+                strokeLinejoin="round"
+              />
+            </>
+          )}
+        </Svg>
       )}
-    </Svg>
+    </View>
   );
 }
 function daily(
@@ -82,20 +111,23 @@ function daily(
           : day.actionSuccess,
   );
 }
+type Tone = "good" | "mid" | "bad" | "neutral";
+// Same thresholds as the web Overview's metric cards.
+const rateTone = (rate: number): Tone =>
+  rate >= 80 ? "good" : rate >= 50 ? "mid" : "bad";
+
 export function MetricBand({
   data,
   pending,
   critical,
   colors,
-  scale,
   missions = false,
   period,
 }: {
   data: InspectionDataset;
   pending: number;
   critical: number;
-  colors: ThemeColors;
-  scale: number;
+  colors: Theme;
   missions?: boolean;
   period?: string;
 }) {
@@ -104,11 +136,24 @@ export function MetricBand({
   const stacked = fontScale > 1.3;
   const duration = data.missions.length
     ? Math.round(
-        data.missions.reduce((sum, m) => sum + m.duration_min, 0) /
+        data.missions.reduce((sum, m) => sum + (m.duration_min ?? 0), 0) /
           data.missions.length,
       )
     : 0;
-  const cards = [
+  const successTone = metrics.actionCount
+    ? rateTone(metrics.actionSuccessRate)
+    : "neutral";
+  const cards: {
+    title: string;
+    value: number;
+    suffix: string;
+    note: string;
+    icon: IconName;
+    tone: Tone;
+    spark: number[];
+    bars: boolean;
+    label: string;
+  }[] = [
     {
       title: missions ? "Total runs" : "To review",
       value: missions ? metrics.missionCount : pending,
@@ -116,8 +161,14 @@ export function MetricBand({
       note: missions
         ? `${metrics.completedCount} completed`
         : `${critical} critical`,
-      color: colors.blue,
-      noteColor: missions ? colors.green : colors.amber,
+      icon: missions ? "missions" : "attention",
+      tone: missions
+        ? "neutral"
+        : critical > 0
+          ? "bad"
+          : pending > 0
+            ? "mid"
+            : "good",
       spark: daily(data, "runs"),
       bars: true,
       label: missions
@@ -129,8 +180,8 @@ export function MetricBand({
       value: metrics.actionSuccessRate,
       suffix: "%",
       note: `${metrics.successfulActionCount} / ${metrics.actionCount} passed`,
-      color: colors.ink,
-      noteColor: colors.muted,
+      icon: "activity",
+      tone: successTone,
       spark: daily(data, "success"),
       bars: false,
       label: `Action success: ${metrics.actionSuccessRate}%, ${metrics.successfulActionCount} of ${metrics.actionCount} passed`,
@@ -142,8 +193,11 @@ export function MetricBand({
       note: missions
         ? period || "All dates"
         : `${metrics.completedCount} / ${metrics.missionCount}`,
-      color: colors.ink,
-      noteColor: colors.muted,
+      icon: missions ? "calendar" : "checks",
+      tone:
+        missions || !metrics.missionCount
+          ? "neutral"
+          : rateTone(metrics.completionRate),
       spark: daily(data, missions ? "duration" : "completion"),
       bars: true,
       label: missions
@@ -151,83 +205,84 @@ export function MetricBand({
         : `Mission completion: ${metrics.completionRate}%, ${metrics.completedCount} of ${metrics.missionCount} completed`,
     },
   ];
+  const toneColor = (tone: Tone) =>
+    tone === "neutral" ? colors.brand : colors[tone];
   return (
     <View
       style={{
         flexDirection: stacked ? "column" : "row",
-        backgroundColor: colors.surface,
-        borderColor: colors.line,
-        borderWidth: 1,
-        borderRadius: 4,
-        marginBottom: 10 * scale,
-        overflow: "hidden",
+        gap: 8,
+        marginBottom: 12,
       }}
     >
-      {cards.map((card, i) => (
-        <View
+      {cards.map((card) => (
+        <Card
           key={card.title}
-          accessible
-          accessibilityLabel={card.label}
-          style={{
-            flex: 1,
-            paddingHorizontal: 12 * scale,
-            paddingVertical: 9 * scale,
-            borderRightWidth: !stacked && i < 2 ? 1 : 0,
-            borderBottomWidth: stacked && i < 2 ? 1 : 0,
-            borderColor: colors.line,
-            minHeight: 86 * scale,
-            justifyContent: "space-between",
-          }}
+          colors={colors}
+          style={{ flex: stacked ? undefined : 1, padding: 12 }}
         >
-          <Text style={{ fontSize: 10 * scale, color: colors.muted }}>
-            {card.title}
-          </Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "baseline",
-              marginTop: 5,
-            }}
-          >
-            <Text
+          <View accessible accessibilityLabel={card.label}>
+            <View
               style={{
-                fontSize: (i ? 26 : 30) * scale,
-                fontWeight: "700",
-                letterSpacing: -1,
-                color: card.color,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 4,
               }}
             >
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                style={{
+                  fontSize: 11,
+                  color: colors.mutedForeground,
+                  flexShrink: 1,
+                }}
+              >
+                {card.title}
+              </Text>
+              <Icon name={card.icon} color={toneColor(card.tone)} size={14} />
+            </View>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={[
+                typography.metric,
+                { color: colors.foreground, marginTop: 6 },
+              ]}
+            >
               {card.value}
-              <Text style={{ fontSize: 13 * scale, letterSpacing: 0 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  letterSpacing: 0,
+                  color: colors.mutedForeground,
+                }}
+              >
                 {card.suffix}
               </Text>
             </Text>
-          </View>
-          <Text
-            style={{
-              fontSize: 10 * scale,
-              color: card.noteColor,
-              marginTop: 3,
-            }}
-          >
-            {card.note}
-          </Text>
-          <View
-            style={{
-              position: "absolute",
-              right: 7,
-              top: 32 * scale,
-              opacity: 0.85,
-            }}
-            pointerEvents="none"
-          >
+            <Text
+              numberOfLines={1}
+              style={{
+                fontSize: 11,
+                marginTop: 2,
+                color:
+                  card.tone === "neutral"
+                    ? colors.mutedForeground
+                    : colors[card.tone],
+              }}
+            >
+              {card.note}
+            </Text>
             <Sparkline
               values={card.spark}
-              color={i === 2 ? (missions ? "#b1bed2" : "#59b98b") : "#77bafa"}
+              color={colors.chartAccent}
               bars={card.bars}
             />
           </View>
-        </View>
+        </Card>
       ))}
     </View>
   );
@@ -254,64 +309,57 @@ const typeGroups = [
     types: ["SIGNAL_DEGRADATION", "ABNORMAL_VIBRATION"],
   },
 ];
+const severities = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
+const CIRCUMFERENCE = 2 * Math.PI * 40;
+const titleCase = (value: string) =>
+  value.charAt(0) + value.slice(1).toLowerCase();
+
 export function SummaryCharts({
   data,
   colors,
-  scale,
   stacked,
   onSeverity,
   onTypes,
 }: {
   data: InspectionDataset;
-  colors: ThemeColors;
-  scale: number;
+  colors: Theme;
   stacked: boolean;
   onSeverity: (value: string) => void;
   onTypes: (types: string[], name: string) => void;
 }) {
   const summary = selectFindingSummary(data);
   const total = summary.total;
-  const donutSize = 81 * scale * (stacked ? 1.6 : 1);
+  const donutSize = stacked ? 150 : 112;
   let offset = 0;
-  const sectors = Object.entries(tones).map(([severity, color]) => {
-    const count = summary.severities.find(
-      (s) => s.severity === severity,
-    )!.count;
-    const length = total ? (count / total) * 251.3 : 0;
-    const value = { severity, color, count, length, offset };
+  const sectors = severities.map((severity) => {
+    const count =
+      summary.severities.find((s) => s.severity === severity)?.count ?? 0;
+    const length = total ? (count / total) * CIRCUMFERENCE : 0;
+    const value = {
+      severity,
+      color: severityColor(colors, severity),
+      count,
+      length,
+      offset,
+    };
     offset += length;
     return value;
   });
+  const hint = (
+    <Text style={{ fontSize: 11, color: colors.mutedForeground }}>
+      Tap to filter
+    </Text>
+  );
   return (
-    <View
-      style={{
-        flexDirection: stacked ? "column" : "row",
-        gap: 10 * scale,
-        marginBottom: 12 * scale,
-      }}
-    >
-      <View
-        style={{
-          flex: 1,
-          padding: 11 * scale,
-          backgroundColor: colors.surface,
-          borderWidth: 1,
-          borderColor: colors.line,
-          borderRadius: 4,
-        }}
-      >
-        <Text
-          style={{
-            color: colors.ink,
-            fontWeight: "600",
-            fontSize: 10.5 * scale,
-            marginBottom: 10 * scale,
-          }}
-        >
-          Findings by severity ›
-        </Text>
+    <>
+      <Panel title="Findings by severity" action={hint} colors={colors}>
         <View
-          style={{ flexDirection: "row", alignItems: "center", gap: 9 * scale }}
+          style={{
+            flexDirection: stacked ? "column" : "row",
+            alignItems: stacked ? "flex-start" : "center",
+            gap: 20,
+            padding: 16,
+          }}
         >
           <View
             style={{
@@ -326,23 +374,23 @@ export function SummaryCharts({
                 cx={50}
                 cy={50}
                 r={40}
-                stroke={colors.raised}
-                strokeWidth={13}
+                stroke={colors.muted}
+                strokeWidth={11}
                 fill="none"
               />
               {sectors.map((sector) => (
                 <Circle
                   key={sector.severity}
                   accessible
-                  accessibilityLabel={`${sector.severity.charAt(0) + sector.severity.slice(1).toLowerCase()} chart segment`}
+                  accessibilityLabel={`${titleCase(sector.severity)} chart segment`}
                   onPress={() => onSeverity(sector.severity)}
                   cx={50}
                   cy={50}
                   r={40}
                   stroke={sector.color}
-                  strokeWidth={13}
+                  strokeWidth={11}
                   fill="none"
-                  strokeDasharray={`${Math.max(0, sector.length - 0.8)} ${251.3 - Math.max(0, sector.length - 0.8)}`}
+                  strokeDasharray={`${Math.max(0, sector.length - 1.2)} ${CIRCUMFERENCE - Math.max(0, sector.length - 1.2)}`}
                   strokeDashoffset={-sector.offset}
                   rotation={-90}
                   origin="50,50"
@@ -357,138 +405,144 @@ export function SummaryCharts({
             >
               <Text
                 style={{
-                  color: colors.ink,
-                  fontSize: 20 * scale,
-                  fontWeight: "700",
+                  color: colors.foreground,
+                  fontSize: stacked ? 30 : 26,
+                  fontWeight: "600",
+                  letterSpacing: -0.8,
                 }}
               >
                 {total}
               </Text>
-              <Text style={{ color: colors.muted, fontSize: 9 * scale }}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>
                 findings
               </Text>
             </View>
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: stacked ? undefined : 1, alignSelf: "stretch" }}>
             {sectors.map((sector) => (
               <Pressable
                 key={sector.severity}
                 accessibilityRole="button"
-                accessibilityLabel={`Filter ${sector.severity.charAt(0) + sector.severity.slice(1).toLowerCase()} findings`}
+                accessibilityLabel={`Filter ${titleCase(sector.severity)} findings`}
                 onPress={() => onSeverity(sector.severity)}
-                hitSlop={8}
-                style={{
-                  minHeight: 23 * scale,
+                style={({ pressed }) => ({
+                  minHeight: 30,
                   flexDirection: "row",
-                  gap: 6,
+                  gap: 8,
                   alignItems: "center",
-                }}
+                  paddingHorizontal: 8,
+                  borderRadius: radii.md,
+                  backgroundColor: pressed ? colors.muted : "transparent",
+                })}
               >
                 <View
                   style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
                     backgroundColor: sector.color,
                   }}
                 />
                 <Text
+                  style={{ color: colors.foreground, fontSize: 12, flex: 1 }}
+                >
+                  {titleCase(sector.severity)}
+                </Text>
+                <Text
                   style={{
-                    color: colors.muted,
-                    fontSize: 9.5 * scale,
-                    flex: 1,
+                    color: colors.foreground,
+                    fontSize: 12,
+                    fontFamily: fonts.mono,
                   }}
                 >
-                  {sector.severity.charAt(0) +
-                    sector.severity.slice(1).toLowerCase()}
-                </Text>
-                <Text style={{ color: colors.ink, fontSize: 10 * scale }}>
                   {sector.count}
+                </Text>
+                <Text
+                  style={{
+                    color: colors.mutedForeground,
+                    fontSize: 11,
+                    width: 34,
+                    textAlign: "right",
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  {total ? Math.round((sector.count / total) * 100) : 0}%
                 </Text>
               </Pressable>
             ))}
           </View>
         </View>
-      </View>
-      <View
-        style={{
-          flex: 1,
-          padding: 11 * scale,
-          backgroundColor: colors.surface,
-          borderWidth: 1,
-          borderColor: colors.line,
-          borderRadius: 4,
-        }}
-      >
-        <Text
-          style={{
-            color: colors.ink,
-            fontWeight: "600",
-            fontSize: 10.5 * scale,
-            marginBottom: 10 * scale,
-          }}
-        >
-          Findings by type
-        </Text>
-        {typeGroups.map((group) => {
-          const percent = summary.types.find(
-            (t) => t.label === group.label,
-          )!.share;
-          return (
-            <Pressable
-              key={group.label}
-              accessibilityRole="button"
-              accessibilityLabel={`Filter ${group.label} findings`}
-              onPress={() => onTypes(group.types, group.label)}
-              hitSlop={8}
-              style={{
-                minHeight: 23 * scale,
-                flexDirection: "row",
-                gap: 6,
-                alignItems: "center",
-              }}
-            >
-              <Icon name={group.icon} color={colors.ink} size={12 * scale} />
-              <Text
-                style={{
-                  fontSize: 8.5 * scale,
-                  color: colors.muted,
-                  width: (stacked ? 110 : 46) * scale,
-                }}
+      </Panel>
+      <Panel title="Findings by type" action={hint} colors={colors}>
+        <View style={{ padding: 8, paddingVertical: 10 }}>
+          {typeGroups.map((group) => {
+            const percent =
+              summary.types.find((t) => t.label === group.label)?.share ?? 0;
+            return (
+              <Pressable
+                key={group.label}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter ${group.label} findings`}
+                onPress={() => onTypes(group.types, group.label)}
+                style={({ pressed }) => ({
+                  minHeight: 36,
+                  flexDirection: "row",
+                  gap: 10,
+                  alignItems: "center",
+                  paddingHorizontal: 8,
+                  borderRadius: radii.md,
+                  backgroundColor: pressed ? colors.muted : "transparent",
+                })}
               >
-                {group.label}
-              </Text>
-              <View
-                style={{
-                  flex: 1,
-                  height: 8,
-                  backgroundColor: colors.raised,
-                  borderRadius: 2,
-                  overflow: "hidden",
-                }}
-              >
+                <Icon
+                  name={group.icon}
+                  color={colors.mutedForeground}
+                  size={14}
+                />
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: colors.foreground,
+                    width: stacked ? 120 : 72,
+                  }}
+                >
+                  {group.label}
+                </Text>
+                {/* Web `.reliability-row .bar`: secondary track, primary fill. */}
                 <View
                   style={{
-                    width: `${percent}%`,
-                    height: "100%",
-                    backgroundColor: "#acd4fd",
+                    flex: 1,
+                    height: 8,
+                    backgroundColor: colors.secondary,
+                    borderRadius: 2,
+                    overflow: "hidden",
                   }}
-                />
-              </View>
-              <Text
-                style={{
-                  color: colors.muted,
-                  fontSize: 9 * scale,
-                  width: (stacked ? 54 : 27) * scale,
-                  textAlign: "right",
-                }}
-              >
-                {Number(percent.toFixed(1))}%
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
+                >
+                  <View
+                    style={{
+                      width: `${percent}%`,
+                      height: "100%",
+                      borderRadius: 2,
+                      backgroundColor: colors.primary,
+                    }}
+                  />
+                </View>
+                <Text
+                  style={{
+                    color: colors.foreground,
+                    fontSize: 11,
+                    fontFamily: fonts.mono,
+                    width: stacked ? 64 : 44,
+                    textAlign: "right",
+                  }}
+                >
+                  {Number(percent.toFixed(1))}%
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Panel>
+    </>
   );
 }

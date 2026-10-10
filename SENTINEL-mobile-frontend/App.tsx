@@ -38,7 +38,13 @@ import { AppHeader } from "./src/components/app-header";
 import { TabBar } from "./src/components/tab-bar";
 import { LoadingScreen } from "./src/components/loading-screen";
 import { PreferencesSheet } from "./src/components/preferences-sheet";
-import { colors as themes, type Appearance } from "./src/design/tokens";
+import {
+  alpha,
+  colors as themes,
+  radii,
+  type Appearance,
+} from "./src/design/tokens";
+import { Icon } from "./src/design/icons";
 import { useReducedMotion } from "./src/design/motion";
 import type { EvidenceSelection, Tab } from "./src/navigation";
 import { parseAppLink } from "./src/navigation";
@@ -173,7 +179,7 @@ function AppShell() {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style={appearance === "light" ? "dark" : "light"} />
       {!data || (!started && loading) ? (
         loading ? (
@@ -183,30 +189,47 @@ function AppShell() {
             style={{
               flex: 1,
               justifyContent: "center",
-              padding: 28,
-              gap: 20,
+              padding: 16,
               backgroundColor: colors.background,
             }}
           >
-            <Text
-              accessibilityRole="header"
-              style={{ fontSize: 24, fontWeight: "600", color: colors.ink }}
-            >
-              Inspections unavailable
-            </Text>
-            <Text
-              accessibilityRole="alert"
-              style={{ color: colors.muted, fontSize: 14 }}
-            >
-              {error}
-            </Text>
-            <Button
-              label="Retry"
-              colors={colors}
-              onPress={() => {
-                void refresh();
+            {/* Web `.data-message`: bordered card with heading, copy, action. */}
+            <View
+              style={{
+                gap: 14,
+                padding: 24,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: radii.xl,
+                backgroundColor: colors.card,
               }}
-            />
+            >
+              <Text
+                accessibilityRole="header"
+                style={{
+                  fontSize: 17,
+                  fontWeight: "600",
+                  color: colors.foreground,
+                }}
+              >
+                Inspections unavailable
+              </Text>
+              <Text
+                accessibilityRole="alert"
+                style={{ color: colors.mutedForeground, fontSize: 14 }}
+              >
+                {error}
+              </Text>
+              <Button
+                label="Retry"
+                variant="default"
+                colors={colors}
+                style={{ alignSelf: "flex-start" }}
+                onPress={() => {
+                  void refresh();
+                }}
+              />
+            </View>
           </View>
         )
       ) : (
@@ -232,14 +255,22 @@ function AppShell() {
             {(error || reviewError) && (
               <View
                 style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  margin: 16,
+                  marginBottom: 0,
                   padding: 12,
-                  backgroundColor: colors.amberSoft,
-                  gap: 8,
+                  borderWidth: 1,
+                  borderColor: alpha(colors.destructive, 0.3),
+                  borderRadius: radii.xl,
+                  backgroundColor: alpha(colors.destructive, 0.06),
                 }}
               >
+                <Icon name="attention" color={colors.destructive} size={16} />
                 <Text
                   accessibilityRole="alert"
-                  style={{ color: colors.ink, fontSize: 13 }}
+                  style={{ flex: 1, color: colors.foreground, fontSize: 13 }}
                 >
                   {error || reviewError}
                 </Text>
@@ -264,8 +295,8 @@ function AppShell() {
                 }}
                 contentContainerStyle={{
                   paddingHorizontal: 16,
-                  paddingTop: 12,
-                  paddingBottom: 10,
+                  paddingTop: 20,
+                  paddingBottom: 16,
                 }}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
@@ -274,7 +305,7 @@ function AppShell() {
                     accessibilityLabel={`Refresh ${screen === "attention" ? "Attention" : screen === "missions" ? "Missions" : "Facility"}`}
                     refreshing={loading}
                     onRefresh={refresh}
-                    tintColor={colors.blue}
+                    tintColor={colors.mutedForeground}
                   />
                 }
                 accessibilityElementsHidden={screen !== tab}

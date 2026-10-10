@@ -5,7 +5,12 @@ export const inspectionImages: Record<string, number> = {
   "visual_pump_motor_01.jpg": require("../assets/demo/visual_pump_motor_01.jpg"),
   "pipe_gallery_01.jpg": require("../assets/demo/pipe_gallery_01.jpg"),
 };
-export const facilityImage = require("../assets/demo/facility.png");
+// Same floor plan the web dashboard renders, with a matching dark variant.
+export const facilityMap = {
+  light: require("../assets/demo/facility.jpg"),
+  dark: require("../assets/demo/facility-dark.jpg"),
+};
+export const brandLogo = require("../assets/brand/logo.png");
 
 const thumbnails = {
   ABNORMAL_TEMPERATURE: require("../assets/design/finding-temperature.png"),

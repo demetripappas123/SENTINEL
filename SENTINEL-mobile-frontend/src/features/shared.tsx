@@ -1,7 +1,8 @@
 import { Text, View, useWindowDimensions } from "react-native";
 import { useMemo } from "react";
-import { scopeDataset, type ThemeColors } from "@sentinel/core";
+import { scopeDataset } from "@sentinel/core";
 import { useInspection } from "../state/inspection-provider";
+import { typography, type Theme } from "../design/tokens";
 
 export function useScreenData() {
   const state = useInspection();
@@ -18,65 +19,50 @@ export function useScreenData() {
     reviewedIds: state.reviews.map((r) => r.findingId),
   };
 }
+/** Web `PageHeading`: tight semibold title, muted subtitle, trailing controls. */
 export function ScreenHeading({
   title,
   subtitle,
   colors,
-  scale,
   trailing,
 }: {
   title: string;
   subtitle?: string;
-  colors: ThemeColors;
-  scale: number;
+  colors: Theme;
   trailing?: React.ReactNode;
 }) {
   const { fontScale } = useWindowDimensions();
+  const stacked = fontScale > 1.3;
   return (
-    <View style={{ marginBottom: 13 * scale }}>
-      <Text
-        style={{
-          fontSize: 9 * scale,
-          color: colors.muted,
-          letterSpacing: 1.7,
-          marginBottom: 6 * scale,
-        }}
-      >
-        OPERATIONS
-      </Text>
-      <View
-        style={{
-          flexDirection: fontScale > 1.3 ? "column" : "row",
-          justifyContent: "space-between",
-          alignItems: fontScale > 1.3 ? "flex-start" : "center",
-          gap: 8,
-        }}
-      >
+    <View
+      style={{
+        flexDirection: stacked ? "column" : "row",
+        justifyContent: "space-between",
+        alignItems: stacked ? "flex-start" : "flex-end",
+        gap: 12,
+        marginBottom: 16,
+      }}
+    >
+      <View style={{ flexShrink: 1 }}>
         <Text
           accessibilityRole="header"
-          style={{
-            fontSize: 27 * scale,
-            lineHeight: 32 * scale,
-            fontWeight: "700",
-            letterSpacing: -1,
-            color: colors.ink,
-          }}
+          style={[typography.heading, { color: colors.foreground }]}
         >
           {title}
         </Text>
-        {trailing}
+        {subtitle && (
+          <Text
+            style={{
+              fontSize: 13,
+              color: colors.mutedForeground,
+              marginTop: 2,
+            }}
+          >
+            {subtitle}
+          </Text>
+        )}
       </View>
-      {subtitle && (
-        <Text
-          style={{
-            fontSize: 12 * scale,
-            color: colors.muted,
-            marginTop: 5 * scale,
-          }}
-        >
-          {subtitle}
-        </Text>
-      )}
+      {trailing}
     </View>
   );
 }
@@ -94,7 +80,8 @@ const months = [
   "Nov",
   "Dec",
 ];
-export function displayTime(value: string) {
+export function displayTime(recorded: string | null | undefined) {
+  const value = recorded || "";
   const month = months[Number(value.slice(5, 7)) - 1];
   return month
     ? `${month} ${Number(value.slice(8, 10))} ${value.slice(11, 16)}`.trim()

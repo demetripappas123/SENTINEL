@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
-import type { ThemeColors } from "@sentinel/core";
 import type { Tab } from "../navigation";
 import { Icon } from "../design/icons";
 import { selectionFeedback } from "../design/motion";
+import { fonts, type Theme } from "../design/tokens";
 
 function TabButton({
   value,
@@ -20,7 +20,7 @@ function TabButton({
   count: number;
   unit: string;
   selected: boolean;
-  colors: ThemeColors;
+  colors: Theme;
   reducedMotion: boolean;
   onSelect: (tab: Tab) => void;
 }) {
@@ -34,6 +34,7 @@ function TabButton({
     animation.start();
     return () => animation.stop();
   }, [selected, reducedMotion, emphasis]);
+  const tint = selected ? colors.foreground : colors.mutedForeground;
   return (
     <Pressable
       accessibilityRole="button"
@@ -47,47 +48,48 @@ function TabButton({
       }}
       style={({ pressed }) => ({
         flex: 1,
-        minHeight: 60,
-        paddingVertical: 6,
+        minHeight: 58,
+        paddingVertical: 7,
         alignItems: "center",
         justifyContent: "center",
         gap: 3,
         opacity: pressed ? 0.65 : 1,
       })}
     >
+      {/* Web nav marks the current route with a brand-colored rule. */}
       <Animated.View
         style={{
           position: "absolute",
-          top: 0,
+          top: -1,
           height: 2,
-          width: "100%",
-          backgroundColor: colors.blue,
+          width: "56%",
+          borderRadius: 1,
+          backgroundColor: colors.brand,
           opacity: emphasis,
         }}
       />
-      <Icon
-        name={value}
-        color={selected ? colors.blue : colors.muted}
-        size={20}
-      />
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: selected ? "600" : "400",
-          color: selected ? colors.blue : colors.muted,
-        }}
-      >
-        {label}
-      </Text>
-      <Text
-        style={{
-          fontSize: 11,
-          color: selected ? colors.blue : colors.muted,
-          fontVariant: ["tabular-nums"],
-        }}
-      >
-        {count}
-      </Text>
+      <Icon name={value} color={tint} size={20} />
+      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: selected ? "600" : "400",
+            color: tint,
+          }}
+        >
+          {label}
+        </Text>
+        <Text
+          style={{
+            fontSize: 10,
+            fontFamily: fonts.mono,
+            color: colors.mutedForeground,
+            fontVariant: ["tabular-nums"],
+          }}
+        >
+          {count}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -100,7 +102,7 @@ export function TabBar({
 }: {
   tab: Tab;
   counts: Record<Tab, number>;
-  colors: ThemeColors;
+  colors: Theme;
   reducedMotion: boolean;
   onSelect: (tab: Tab) => void;
 }) {
@@ -109,8 +111,8 @@ export function TabBar({
       style={{
         flexDirection: "row",
         borderTopWidth: 1,
-        borderColor: colors.line,
-        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        backgroundColor: colors.sidebar,
       }}
     >
       {(

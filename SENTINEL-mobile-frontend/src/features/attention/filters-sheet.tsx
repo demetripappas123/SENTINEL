@@ -1,7 +1,8 @@
-import { Modal, ScrollView, Text, View } from "react-native";
-import { humanize, type ThemeColors } from "@sentinel/core";
-import { Button, layout } from "../../ui";
+import { View } from "react-native";
+import { humanize } from "@sentinel/core";
+import { Button, Overline, Sheet } from "../../ui";
 import { useReducedMotion } from "../../design/motion";
+import type { Theme } from "../../design/tokens";
 
 export function FiltersSheet({
   colors,
@@ -12,7 +13,7 @@ export function FiltersSheet({
   onTypes,
   onClose,
 }: {
-  colors: ThemeColors;
+  colors: Theme;
   severity: string | null;
   types: string[];
   availableTypes: string[];
@@ -21,81 +22,67 @@ export function FiltersSheet({
   onClose: () => void;
 }) {
   const reduced = useReducedMotion();
+  const chips = { flexDirection: "row", flexWrap: "wrap", gap: 8 } as const;
   return (
-    <Modal
-      transparent
-      animationType={reduced ? "none" : "slide"}
-      onRequestClose={onClose}
-    >
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "flex-end",
-          backgroundColor: "#10182c66",
-        }}
-      >
-        <View
-          accessibilityViewIsModal
-          style={{
-            maxHeight: "85%",
-            backgroundColor: colors.surface,
-            padding: 22,
-            paddingBottom: 36,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            gap: 12,
-          }}
-        >
-          <View style={layout.row}>
-            <Text
-              accessibilityRole="header"
-              style={[layout.title, { color: colors.ink }]}
-            >
-              Finding filters
-            </Text>
-            <Button label="Close filters" colors={colors} onPress={onClose} />
-          </View>
-          <ScrollView contentContainerStyle={{ gap: 8 }}>
-            <Text style={{ color: colors.muted }}>SEVERITY</Text>
-            {[null, "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((value) => (
-              <Button
-                key={value || "all"}
-                label={value ? humanize(value) : "Any severity"}
-                selected={severity === value}
-                colors={colors}
-                onPress={() => onSeverity(value)}
-              />
-            ))}
-            <Text style={{ color: colors.muted, marginTop: 12 }}>
-              FINDING TYPE
-            </Text>
-            {availableTypes.map((value) => (
-              <Button
-                key={value}
-                label={humanize(value)}
-                selected={types.includes(value)}
-                colors={colors}
-                onPress={() =>
-                  onTypes(
-                    types.includes(value)
-                      ? types.filter((v) => v !== value)
-                      : [...types, value],
-                  )
-                }
-              />
-            ))}
-          </ScrollView>
+    <Sheet
+      title="Finding filters"
+      colors={colors}
+      reducedMotion={reduced}
+      onClose={onClose}
+      closeLabel="Close filters"
+      footer={
+        <View style={{ flexDirection: "row", gap: 8 }}>
           <Button
             label="Clear filters"
             colors={colors}
+            style={{ flex: 1 }}
             onPress={() => {
               onSeverity(null);
               onTypes([]);
             }}
           />
-          <Button label="Show findings" colors={colors} onPress={onClose} />
+          <Button
+            label="Show findings"
+            variant="default"
+            colors={colors}
+            style={{ flex: 1 }}
+            onPress={onClose}
+          />
         </View>
+      }
+    >
+      <Overline colors={colors}>Severity</Overline>
+      <View style={chips}>
+        {[null, "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((value) => (
+          <Button
+            key={value || "all"}
+            label={value ? humanize(value) : "Any severity"}
+            selected={severity === value}
+            colors={colors}
+            onPress={() => onSeverity(value)}
+          />
+        ))}
       </View>
-    </Modal>
+      <Overline colors={colors} style={{ marginTop: 8 }}>
+        Finding type
+      </Overline>
+      <View style={chips}>
+        {availableTypes.map((value) => (
+          <Button
+            key={value}
+            label={humanize(value)}
+            selected={types.includes(value)}
+            colors={colors}
+            onPress={() =>
+              onTypes(
+                types.includes(value)
+                  ? types.filter((v) => v !== value)
+                  : [...types, value],
+              )
+            }
+          />
+        ))}
+      </View>
+    </Sheet>
   );
 }
