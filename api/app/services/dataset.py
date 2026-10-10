@@ -9,6 +9,7 @@ from app.schemas.canonical import (
     Location,
     Mission,
     Reading,
+    ReplayEvent,
     Source,
 )
 from app.schemas.dataset import (
@@ -18,6 +19,7 @@ from app.schemas.dataset import (
     InspectionDataset,
     MissionOut,
     ReadingOut,
+    ReplayEventOut,
     WaypointOut,
 )
 
@@ -28,6 +30,7 @@ _TABLES = {
     "anomaly_claims": ("anomaly_claims", AnomalyClaim),
     "assets": ("assets", Asset),
     "locations": ("locations", Location),
+    "events": ("replay_events", ReplayEvent),
 }
 
 
@@ -53,7 +56,7 @@ def to_dataset(batch: CanonicalBatch) -> InspectionDataset:
     """Convert canonical records to the frontend dataset.
 
     Records are sorted by ID so screens are stable whatever order the
-    database returns rows in. Replay events are not stored yet.
+    database returns rows in.
     """
     return InspectionDataset(
         missions=[
@@ -90,6 +93,13 @@ def to_dataset(batch: CanonicalBatch) -> InspectionDataset:
         readings=[
             ReadingOut(**reading.model_dump(include=set(ReadingOut.model_fields)))
             for reading in sorted(batch.readings, key=lambda row: row.reading_id)
+        ],
+        events=[
+            ReplayEventOut(
+                **event.model_dump(include=set(ReplayEventOut.model_fields) - {"timestamp"}),
+                timestamp=format_timestamp(event.timestamp),
+            )
+            for event in sorted(batch.events, key=lambda row: row.event_id)
         ],
     )
 

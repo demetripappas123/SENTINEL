@@ -28,8 +28,23 @@ def test_kit_dataset_matches_the_bundled_frontend_fixture(key):
     assert dataset[key] == _project(fixture[key], dataset[key])
 
 
-def test_events_are_empty_until_replay_is_stored():
-    assert to_dataset(map_kit(KIT_DATA)).events == []
+def test_kit_replay_events_match_the_bundled_frontend_fixture():
+    fixture = json.loads(FIXTURE.read_text())
+    events = to_dataset(map_kit(KIT_DATA)).model_dump(mode="json")["events"]
+    assert len(events) == 500
+    assert events == sorted(fixture["events"], key=lambda event: event["event_id"])
+
+
+def test_every_kit_replay_event_belongs_to_a_kit_mission():
+    batch = map_kit(KIT_DATA)
+    missions = {mission.mission_id for mission in batch.missions}
+    assert {event.mission_id for event in batch.events} <= missions
+
+
+def test_kit_folder_without_replay_maps_no_events(tmp_path):
+    for name in ["locations", "assets", "missions", "actions", "readings", "anomalies"]:
+        (tmp_path / f"{name}.csv").write_text((KIT_DATA / f"{name}.csv").read_text())
+    assert map_kit(tmp_path).events == []
 
 
 def test_timestamps_are_utc_without_offset():

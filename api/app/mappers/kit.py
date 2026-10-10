@@ -1,4 +1,5 @@
 import csv
+import json
 from pathlib import Path
 
 from app.mappers.parse import flag, number, required_text, text, timestamp, whole_number
@@ -10,6 +11,7 @@ from app.schemas.canonical import (
     Location,
     Mission,
     Reading,
+    ReplayEvent,
     Source,
 )
 
@@ -24,6 +26,7 @@ def map_kit(data_dir: Path) -> CanonicalBatch:
         actions=[_action(row) for row in _rows(data_dir / "actions.csv")],
         readings=[_reading(row) for row in _rows(data_dir / "readings.csv")],
         anomaly_claims=[_claim(row) for row in _rows(data_dir / "anomalies.csv")],
+        events=_events(data_dir / "replay.ndjson"),
     )
 
 
@@ -39,6 +42,25 @@ def _required_int(value: object, field_name: str) -> int:
     if parsed is None:
         raise ValueError(f"Missing {field_name}")
     return parsed
+
+
+def _events(path: Path) -> list[ReplayEvent]:
+    """Replay events, one JSON object per line. The file is optional."""
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8") as handle:
+        return [_event(json.loads(line)) for line in handle if line.strip()]
+
+
+def _event(row: dict) -> ReplayEvent:
+    return ReplayEvent(
+        source=Source.kit,
+        event_id=required_text(row.get("event_id"), "event_id"),
+        mission_id=required_text(row.get("mission_id"), "mission_id"),
+        timestamp=timestamp(row.get("timestamp")),
+        event_type=required_text(row.get("event_type"), "event_type"),
+        details=row.get("details") or {},
+    )
 
 
 def _rows(path: Path) -> list[dict[str, str]]:
