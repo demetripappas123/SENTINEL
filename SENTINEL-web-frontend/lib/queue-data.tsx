@@ -10,6 +10,7 @@ import {
 import type { QueueItem } from "@sentinel/core/api";
 
 const QueueContext = createContext<QueueItem[]>([]);
+const QueueReadyContext = createContext(true);
 
 export function QueueProvider({
   initial,
@@ -19,8 +20,9 @@ export function QueueProvider({
   children: ReactNode;
 }) {
   const [items, setItems] = useState<QueueItem[]>(initial ?? []);
+  const [ready, setReady] = useState(initial !== undefined);
   useEffect(() => {
-    if (initial) return;
+    if (initial !== undefined) return;
     let cancelled = false;
     fetch("/api/queue")
       .then((response) => {
@@ -32,14 +34,25 @@ export function QueueProvider({
       })
       .catch(() => {
         if (!cancelled) setItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true);
       });
     return () => {
       cancelled = true;
     };
   }, [initial]);
-  return <QueueContext.Provider value={items}>{children}</QueueContext.Provider>;
+  return (
+    <QueueReadyContext.Provider value={ready}>
+      <QueueContext.Provider value={items}>{children}</QueueContext.Provider>
+    </QueueReadyContext.Provider>
+  );
 }
 
 export function useQueue(): QueueItem[] {
   return useContext(QueueContext);
+}
+
+export function useQueueReady(): boolean {
+  return useContext(QueueReadyContext);
 }

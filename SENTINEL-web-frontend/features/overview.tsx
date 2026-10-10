@@ -22,19 +22,26 @@ import {
   Panel,
   Tag,
 } from "../components/ui";
-import { useQueue } from "../lib/queue-data";
+import { useQueue, useQueueReady } from "../lib/queue-data";
 import { FacilityMap } from "../components/facility-map";
 import { MissionTable } from "../components/mission-table";
 import { useReviews } from "../lib/browser-state";
-import { useInspectionData } from "../lib/inspection-data";
+import {
+  pendingCount,
+  pendingRate,
+  useInspectionData,
+  useInspectionReady,
+} from "../lib/inspection-data";
 
 export function Overview() {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
   const [waypoint, setWaypoint] = useState("WP05");
   const data = useInspectionData();
+  const dataReady = useInspectionReady();
   const queue = useQueue();
+  const queueReady = useQueueReady();
   const { reviewedIds } = useReviews();
-  const metrics = getMetrics(data, configuration);
+  const metrics = dataReady ? getMetrics(data, configuration) : null;
   const scenarios = new Map(data.missions.map((mission) => [mission.mission_id, mission.scenario]));
   const queued = selectQueue(queue, { configuration, reviewedIds, scenarios });
   const inspectionFailures = queued.filter((item) => item.verdict === "inspection_failure").length;
@@ -55,8 +62,8 @@ export function Overview() {
       ? (rows.filter((a) => a.status === "SUCCESS").length / rows.length) * 100
       : null;
   };
-  const baseline = rateFor("V1");
-  const improved = rateFor("V2");
+  const baseline = dataReady ? rateFor("V1") : null;
+  const improved = dataReady ? rateFor("V2") : null;
   const versionDelta =
     baseline == null || improved == null
       ? null
@@ -69,35 +76,45 @@ export function Overview() {
   const cards = [
     {
       label: "Mission completion",
-      value: metrics.completionRate.toFixed(1),
-      percent: true,
-      note:
-        metrics.completedCount + " / " + metrics.missionCount + " completed",
+      value: metrics ? metrics.completionRate.toFixed(1) : pendingRate,
+      percent: metrics != null,
+      note: metrics
+        ? metrics.completedCount + " / " + metrics.missionCount + " completed"
+        : pendingCount,
       icon: CheckCheck,
-      tone: rateTone(metrics.completionRate),
+      tone: metrics ? rateTone(metrics.completionRate) : "",
     },
     {
       label: "Action success",
-      value: metrics.actionSuccessRate.toFixed(1),
-      percent: true,
-      note:
-        metrics.successfulActionCount + " / " + metrics.actionCount + " passed",
+      value: metrics ? metrics.actionSuccessRate.toFixed(1) : pendingRate,
+      percent: metrics != null,
+      note: metrics
+        ? metrics.successfulActionCount + " / " + metrics.actionCount + " passed"
+        : pendingCount,
       icon: Activity,
-      tone: rateTone(metrics.actionSuccessRate),
+      tone: metrics ? rateTone(metrics.actionSuccessRate) : "",
     },
     {
       label: "To review",
-      value: queued.length,
-      note: inspectionFailures + " inspection failures",
+      value: queueReady ? queued.length : pendingCount,
+      note: queueReady ? inspectionFailures + " inspection failures" : pendingCount,
       icon: TriangleAlert,
-      tone: inspectionFailures > 0 ? "bad" : queued.length > 0 ? "mid" : "good",
+      tone: !queueReady
+        ? ""
+        : inspectionFailures > 0
+          ? "bad"
+          : queued.length > 0
+            ? "mid"
+            : "good",
     },
     {
       label: "Findings",
-      value: findings.length,
-      note: data.locations.length + " waypoints · " + data.assets.length + " assets",
+      value: dataReady ? findings.length : pendingCount,
+      note: dataReady
+        ? data.locations.length + " waypoints · " + data.assets.length + " assets"
+        : pendingCount,
       icon: ScanLine,
-      tone: findings.length === 0 ? "good" : "mid",
+      tone: !dataReady ? "" : findings.length === 0 ? "good" : "mid",
     },
   ];
   return (
@@ -130,7 +147,9 @@ export function Overview() {
       <div className="insight-strip">
         <TriangleAlert className="icon" />
         <span>
-          <strong>{metrics.completedWithFailures} completed missions</strong>{" "}
+          <strong>
+            {metrics ? metrics.completedWithFailures : pendingCount} completed missions
+          </strong>{" "}
           have failed actions
         </span>
         <Link href="/missions" className="link-button">
@@ -155,12 +174,14 @@ export function Overview() {
             <FacilityMap selected={active} onSelect={setWaypoint} />
             <div className="map-key">
               <span>2 floors</span>
-              <span>{data.locations.length} waypoints</span>
+              <span>{dataReady ? data.locations.length : pendingCount} waypoints</span>
             </div>
           </div>
           <div className="location-note">
-            <span className="location-number">{active}</span>
-            <strong>{active ? locationName(data, active) : "No locations"}</strong>
+            <span className="location-number">{dataReady ? active : pendingCount}</span>
+            <strong>
+              {dataReady ? (active ? locationName(data, active) : "No locations") : pendingCount}
+            </strong>
           </div>
         </Panel>
         <Panel
@@ -171,10 +192,14 @@ export function Overview() {
             </>
           }
           className="attention-panel"
-          action={<Tag tone="red">{inspectionFailures} inspection failures</Tag>}
+          action={
+            <Tag tone={queueReady ? "red" : ""}>
+              {queueReady ? inspectionFailures : pendingCount} inspection failures
+            </Tag>
+          }
           footer={
             <>
-              <span>{queued.length} to review</span>
+              <span>{queueReady ? queued.length : pendingCount} to review</span>
               <Link href="/review" className="btn green">
                 Review queue →
               </Link>
@@ -192,9 +217,10 @@ export function Overview() {
                 </div>
               </Link>
             ))}
-            {!queued.length && (
+            {queueReady && !queued.length && (
               <p className="panel-body small muted">Queue is clear.</p>
             )}
+            {!queueReady && <p className="panel-body small muted">{pendingCount}</p>}
           </div>
         </Panel>
         <Panel
@@ -203,8 +229,8 @@ export function Overview() {
           footer={
             <>
               <span>V1 → V2</span>
-              <Tag tone="green">
-                {versionDelta == null ? "—" : (versionDelta > 0 ? "+" : "") + versionDelta + " pp"}
+              <Tag tone={versionDelta == null ? "" : "green"}>
+                {versionDelta == null ? pendingCount : (versionDelta > 0 ? "+" : "") + versionDelta + " pp"}
               </Tag>
             </>
           }
@@ -217,11 +243,11 @@ export function Overview() {
               "GAUGE_READING",
               "ACOUSTIC_INSPECTION",
             ].map((type) => {
-              const rows = actions.filter((a) => a.action_type === type),
-                rate = rows.length
-                  ? (rows.filter((a) => a.status === "SUCCESS").length /
-                      rows.length) *
-                    100
+              const rows = actions.filter((a) => a.action_type === type);
+              const rate = !dataReady
+                ? null
+                : rows.length
+                  ? (rows.filter((a) => a.status === "SUCCESS").length / rows.length) * 100
                   : 0;
               return (
                 <div className="reliability-row" key={type}>
@@ -234,12 +260,15 @@ export function Overview() {
                     className="bar"
                     role="img"
                     aria-label={
-                      humanize(type) + ": " + rate.toFixed(1) + "% successful"
+                      humanize(type) +
+                      ": " +
+                      (rate == null ? pendingRate : rate.toFixed(1) + "%") +
+                      " successful"
                     }
                   >
-                    <span style={{ width: rate + "%" }} />
+                    <span style={{ width: (rate ?? 0) + "%" }} />
                   </div>
-                  <span className="percent">{rate.toFixed(1)}%</span>
+                  <span className="percent">{rate == null ? pendingRate : rate.toFixed(1) + "%"}</span>
                 </div>
               );
             })}
@@ -253,7 +282,11 @@ export function Overview() {
             </Link>
           }
         >
-          <MissionTable missions={missions.slice().reverse().slice(0, 4)} />
+          {dataReady ? (
+            <MissionTable missions={missions.slice().reverse().slice(0, 4)} />
+          ) : (
+            <p className="panel-body">{pendingCount}</p>
+          )}
         </Panel>
       </div>
     </>

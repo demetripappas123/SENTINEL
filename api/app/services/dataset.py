@@ -32,25 +32,45 @@ _TABLES = {
 }
 
 
-def get_dataset(source: Source) -> InspectionDataset:
-    """Every canonical record for one source, in the frontend's shape."""
+def _tables(detail: bool) -> dict[str, tuple[str, type]]:
+    if detail:
+        return _TABLES
+    return {key: value for key, value in _TABLES.items() if key != "readings"}
+
+
+def _load(conn, source: Source | None, detail: bool) -> dict:
+    loaded: dict = {}
+    for field, (table, model) in _tables(detail).items():
+        statement = f"SELECT * FROM sentinel.{table}"
+        params = ()
+        if source is not None:
+            statement += " WHERE source = %s"
+            params = (source.value,)
+        loaded[field] = [model.model_validate(row) for row in conn.execute(statement, params).fetchall()]
+    if not detail:
+        loaded["readings"] = []
+    return loaded
+
+
+def get_dataset(source: Source, *, detail: bool = True) -> InspectionDataset:
+    """Canonical records for one source, in the frontend's shape.
+
+    The shell omits readings and derived replay. Those are the heavy parts
+    and are only needed after the counts and lists are on screen.
+    """
     with connect() as conn:
-        batch = CanonicalBatch(
-            **{
-                field: [
-                    model.model_validate(row)
-                    for row in conn.execute(
-                        f"SELECT * FROM sentinel.{table} WHERE source = %s",
-                        (source.value,),
-                    ).fetchall()
-                ]
-                for field, (table, model) in _TABLES.items()
-            }
-        )
-    return to_dataset(batch)
+        loaded = _load(conn, source, detail)
+    return to_dataset(CanonicalBatch(**loaded), include_events=detail)
 
 
-def to_dataset(batch: CanonicalBatch) -> InspectionDataset:
+def get_live_dataset(*, detail: bool = True) -> InspectionDataset:
+    """Every source in one connection. Same shell/detail split as get_dataset."""
+    with connect() as conn:
+        loaded = _load(conn, None, detail)
+    return to_dataset(CanonicalBatch(**loaded), include_events=detail)
+
+
+def to_dataset(batch: CanonicalBatch, *, include_events: bool = True) -> InspectionDataset:
     """Convert canonical records to the frontend dataset.
 
     Records are sorted by ID so screens are stable whatever order the

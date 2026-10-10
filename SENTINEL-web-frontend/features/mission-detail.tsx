@@ -13,11 +13,17 @@ import {
 } from "@sentinel/core";
 import { PageHeading, Panel, severityTone, Tag } from "../components/ui";
 import { Capture } from "../components/findings";
-import { useInspectionData, useInspectionReady } from "../lib/inspection-data";
+import {
+  pendingCount,
+  useInspectionData,
+  useInspectionDetailReady,
+  useInspectionReady,
+} from "../lib/inspection-data";
 
 export function MissionDetail({ missionId }: { missionId: string }) {
   const data = useInspectionData();
   const ready = useInspectionReady();
+  const detailReady = useInspectionDetailReady();
   const mission = data.missions.find((m) => m.mission_id === missionId),
     actions = missionActions(data, missionId);
   const [selectedId, setSelectedId] = useState(
@@ -25,7 +31,16 @@ export function MissionDetail({ missionId }: { missionId: string }) {
   );
   const selected =
     actions.find((a) => a.action_id === selectedId) || actions[0];
-  if (!ready) return <p>Loading mission.</p>;
+  if (!ready) {
+    return (
+      <>
+        <PageHeading title="Mission" />
+        <Panel title={pendingCount}>
+          <p className="panel-body">{pendingCount} / {pendingCount} successful</p>
+        </Panel>
+      </>
+    );
+  }
   if (!mission) return <p>Mission unavailable.</p>;
   const passed = actions.filter((a) => a.status === "SUCCESS").length;
   const label = missionLabel(mission);
@@ -233,7 +248,9 @@ export function MissionDetail({ missionId }: { missionId: string }) {
             <p className="panel-body small muted">No finding recorded.</p>
           )}
           <div className="inspector-section">Measurements</div>
-          {readings.length ? (
+          {!detailReady ? (
+            <p className="panel-body small muted">{pendingCount}</p>
+          ) : readings.length ? (
             readings.map((r) => (
               <div className="reading-row" key={r.reading_id}>
                 <span>

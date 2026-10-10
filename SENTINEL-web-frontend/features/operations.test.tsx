@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { dataset } from "@sentinel/core";
 import type { QueueItem } from "@sentinel/core/api";
 import { InspectionDataProvider } from "../lib/inspection-data";
@@ -36,6 +36,21 @@ function renderStored(ui: ReactNode) {
 }
 
 describe("dashboard workflows", () => {
+  it("shows a loading state instead of zero counts before data arrives", () => {
+    vi.stubGlobal("fetch", () => new Promise(() => {}));
+    render(
+      <InspectionDataProvider>
+        <QueueProvider>
+          <Overview />
+        </QueueProvider>
+      </InspectionDataProvider>,
+    );
+    expect(screen.getByRole("region", { name: "Operational metrics" })).toBeInTheDocument();
+    expect(screen.getAllByText("--.-%").length).toBeGreaterThan(0);
+    expect(screen.queryByText("0.0")).not.toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
   it("changes operational metrics when selecting V2", async () => {
     renderStored(<Overview />);
     await userEvent.click(

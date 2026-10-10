@@ -139,6 +139,18 @@ export const severityTone = (severity: string) =>
       ? "amber"
       : "blue";
 
+export function LoadingStatus({
+  label = "Loading inspections…",
+}: {
+  label?: string;
+}) {
+  return (
+    <p className="panel-body" role="status">
+      {label}
+    </p>
+  );
+}
+
 export function Empty({ title = "No matching findings" }: { title?: string }) {
   return (
     <div className="flex flex-col gap-1 py-8 text-muted-foreground" role="status">

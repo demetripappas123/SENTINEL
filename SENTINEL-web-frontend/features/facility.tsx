@@ -5,12 +5,13 @@ import { FacilityMap } from "../components/facility-map";
 import { FindingDialog, FindingRow } from "../components/findings";
 import { ConfigurationControl, PageHeading, Panel, Tag } from "../components/ui";
 import { useReviews } from "../lib/browser-state";
-import { useInspectionData } from "../lib/inspection-data";
+import { pendingCount, useInspectionData, useInspectionReady } from "../lib/inspection-data";
 export function Facility() {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
   const [waypoint, setWaypoint] = useState("WP05"),
     [selected, setSelected] = useState<Finding | null>(null);
   const data = useInspectionData();
+  const ready = useInspectionReady();
   const { reviewedIds, markReviewed } = useReviews();
   const active = data.locations.some((l) => l.location_id === waypoint)
     ? waypoint
@@ -34,36 +35,38 @@ export function Facility() {
       <div className="facility-layout">
         <Panel
           title="Floor plan"
-          action={<span className="small muted">{data.locations.length} waypoints</span>}
+          action={<span className="small muted">{ready ? data.locations.length : pendingCount} waypoints</span>}
         >
           <div className="map-wrap">
             <FacilityMap selected={active} onSelect={setWaypoint} />
           </div>
           <div className="location-note">
-            <span className="location-number">{active}</span>
+            <span className="location-number">{ready ? active : pendingCount}</span>
             <div>
-              <h2>{location ? location.location_name : "No locations"}</h2>
+              <h2>{ready ? (location ? location.location_name : "No locations") : pendingCount}</h2>
               <p>
-                {location
-                  ? humanize(location.environment) + " · Floor " + location.floor
-                  : "No stored locations"}
+                {!ready
+                  ? pendingCount
+                  : location
+                    ? humanize(location.environment) + " · Floor " + location.floor
+                    : "No stored locations"}
               </p>
             </div>
           </div>
           <div className="summary-band" style={{ border: 0, margin: 0 }}>
             <div className="datum">
               <span className="small muted">Actions</span>
-              <strong>{actions.length}</strong>
+              <strong>{ready ? actions.length : pendingCount}</strong>
             </div>
             <div className="datum">
               <span className="small muted">Failed</span>
               <strong>
-                {actions.filter((a) => a.status === "FAILED").length}
+                {ready ? actions.filter((a) => a.status === "FAILED").length : pendingCount}
               </strong>
             </div>
             <div className="datum">
               <span className="small muted">Findings</span>
-              <strong>{findings.length}</strong>
+              <strong>{ready ? findings.length : pendingCount}</strong>
             </div>
           </div>
           {findings.slice(0, 3).map((f) => (
@@ -95,7 +98,7 @@ export function Facility() {
               >
                 <span className="mono">{l.location_id}</span>
                 <span>{l.location_name}</span>
-                <Tag tone={failed ? "amber" : "green"}>{failed} failed</Tag>
+                <Tag tone={ready && failed ? "amber" : "green"}>{ready ? failed + " failed" : pendingCount}</Tag>
               </button>
             );
           })}

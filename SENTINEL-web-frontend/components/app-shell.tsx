@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import {
+  Boxes,
   History,
   LayoutDashboard,
   Map,
@@ -15,8 +16,13 @@ import {
 } from "lucide-react";
 import { selectQueue } from "@sentinel/core";
 import { useReviews, useTheme } from "../lib/browser-state";
-import { useInspectionData } from "../lib/inspection-data";
-import { useQueue } from "../lib/queue-data";
+import {
+  pendingCount,
+  useInspectionData,
+  useInspectionDetailReady,
+  useInspectionReady,
+} from "../lib/inspection-data";
+import { useQueue, useQueueReady } from "../lib/queue-data";
 import { cn } from "@/lib/utils";
 import { Button, Tag } from "./ui";
 
@@ -34,6 +40,7 @@ function storedRange(missions: { start_time: string | null }[]) {
 const navigation = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/missions", label: "Missions", icon: Route },
+  { href: "/assets", label: "Assets", icon: Boxes },
   { href: "/review", label: "Review", icon: TriangleAlert },
   { href: "/facility", label: "Facility", icon: Map },
   { href: "/replay", label: "Replay", icon: History },
@@ -41,18 +48,22 @@ const navigation = [
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const data = useInspectionData();
+  const dataReady = useInspectionReady();
+  const detailReady = useInspectionDetailReady();
   const queue = useQueue();
+  const queueReady = useQueueReady();
   const { reviewedIds } = useReviews();
   const { theme, toggleTheme } = useTheme();
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
-  const counts: Record<string, number | undefined> = {
-    "/missions": data.missions.length,
-    "/review": selectQueue(queue, { reviewedIds }).length,
-    "/facility": data.locations.length,
-    "/replay": data.events.length,
+  const counts: Record<string, number | string | undefined> = {
+    "/missions": dataReady ? data.missions.length : pendingCount,
+    "/assets": dataReady ? data.assets.length : pendingCount,
+    "/review": dataReady && queueReady ? selectQueue(queue, { reviewedIds }).length : pendingCount,
+    "/facility": dataReady ? data.locations.length : pendingCount,
+    "/replay": detailReady ? data.events.length : pendingCount,
   };
   return (
     <div className="grid h-dvh grid-cols-[212px_minmax(0,1fr)] grid-rows-[52px_minmax(0,1fr)] bg-background text-foreground">
@@ -129,9 +140,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="mt-auto border-t px-2 pt-3 text-[11px] text-muted-foreground">
           <p className="font-mono">
-            {data.missions.length} missions · {data.actions.length} actions
+            {dataReady ? data.missions.length : pendingCount} missions ·{" "}
+            {dataReady ? data.actions.length : pendingCount} actions
           </p>
-          <p className="mt-1.5">{storedRange(data.missions)}</p>
+          <p className="mt-1.5">{dataReady ? storedRange(data.missions) : pendingCount}</p>
         </div>
       </aside>
       <main id="main" className="overflow-auto p-6">

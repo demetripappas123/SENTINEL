@@ -14,8 +14,8 @@ import {
 import type { QueueItem } from "@sentinel/core/api";
 import { Button, ConfigurationControl, Empty, PageHeading, Panel, Tag } from "../components/ui";
 import { useReviews } from "../lib/browser-state";
-import { useInspectionData } from "../lib/inspection-data";
-import { useQueue } from "../lib/queue-data";
+import { pendingCount, useInspectionData, useInspectionReady } from "../lib/inspection-data";
+import { useQueue, useQueueReady } from "../lib/queue-data";
 
 export function ReviewQueue({ missionId }: { missionId?: string }) {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
@@ -23,8 +23,11 @@ export function ReviewQueue({ missionId }: { missionId?: string }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<QueueItem | null>(null);
   const data = useInspectionData();
+  const dataReady = useInspectionReady();
   const queue = useQueue();
+  const queueReady = useQueueReady();
   const { reviewedIds, markReviewed, resetReviews } = useReviews();
+  const listReady = dataReady && queueReady;
   const scenarios = new globalThis.Map(
     data.missions.map((mission) => [mission.mission_id, mission.scenario]),
   );
@@ -82,7 +85,9 @@ export function ReviewQueue({ missionId }: { missionId?: string }) {
         className="full-queue"
       >
         <div className="finding-list">
-          {items.length ? (
+          {!listReady ? (
+            <p className="panel-body">{pendingCount}</p>
+          ) : items.length ? (
             items.map((item) => (
               <QueueRow
                 key={item.id}

@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { humanize, shortTime, type Configuration, type ReplayEvent } from "@sentinel/core";
 import { Button, ConfigurationControl, PageHeading, Panel, Tag } from "../components/ui";
-import { useInspectionData } from "../lib/inspection-data";
+import { pendingCount, useInspectionData, useInspectionDetailReady } from "../lib/inspection-data";
 export function Replay() {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
   const data = useInspectionData();
+  const detailReady = useInspectionDetailReady();
   const missionIds = new Set(data.missions
     .filter((m) => configuration === "ALL" || m.scenario === configuration)
     .map((m) => m.mission_id));

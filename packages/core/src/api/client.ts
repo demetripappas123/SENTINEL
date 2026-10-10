@@ -292,8 +292,13 @@ export function createApiClient(
       throw new Error("SENTINEL API request failed (" + response.status + ")");
     return response.json();
   }
-  async function getDataset(source: DataSource = "kit"): Promise<InspectionDataset> {
-    const value = await request("/dataset?source=" + source);
+  async function getDataset(
+    source: DataSource = "kit",
+    detail = true,
+  ): Promise<InspectionDataset> {
+    const value = await request(
+      "/dataset?source=" + source + (detail ? "" : "&detail=0"),
+    );
     if (!isInspectionDataset(value))
       throw new Error("Invalid dataset response");
     return value;
@@ -306,9 +311,15 @@ export function createApiClient(
       return value;
     },
     getDataset,
-    async getLiveDataset(): Promise<InspectionDataset> {
+    async getCombinedDataset(detail = true): Promise<InspectionDataset> {
+      const value = await request("/dataset/live" + (detail ? "" : "?detail=0"));
+      if (!isInspectionDataset(value))
+        throw new Error("Invalid dataset response");
+      return value;
+    },
+    async getLiveDataset(detail = true): Promise<InspectionDataset> {
       const parts = await Promise.all(
-        (["kit", "orbit", "spot"] as const).map((source) => getDataset(source)),
+        (["kit", "orbit", "spot"] as const).map((source) => getDataset(source, detail)),
       );
       return {
         missions: parts.flatMap((part) => part.missions),
