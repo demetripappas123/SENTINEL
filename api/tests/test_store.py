@@ -50,16 +50,12 @@ def _mission() -> Mission:
     return Mission(source=Source.kit, mission_id="M001", mission_name="Route 01", mission_status="COMPLETED")
 
 
-def test_persist_upserts_replay_events_after_their_missions():
+def test_persist_stores_missions_and_leaves_replay_derived():
     conn = FakeConnection()
     persist(conn, CanonicalBatch(missions=[_mission()], events=[_event()]), QueueUpdate())
     tables = [statement.split("sentinel.")[1].split()[0] for statement, _ in conn.writes]
-    assert tables.index("replay_events") > tables.index("missions")
-    statement, rows = conn.writes[tables.index("replay_events")]
-    assert "ON CONFLICT (source, event_id) DO UPDATE" in statement
-    source, event_id, mission_id, timestamp, event_type, details = rows[0]
-    assert (source, event_id, mission_id, timestamp, event_type) == ("kit", "E00001", "M001", STARTED, "MISSION_STARTED")
-    assert details.obj == {"scenario": "BASELINE", "battery_pct": 82}
+    assert "missions" in tables
+    assert "replay_events" not in tables
 
 
 def test_get_dataset_derives_replay_from_source_missions(monkeypatch):
