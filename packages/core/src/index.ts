@@ -14,6 +14,7 @@ export * from "./repository";
 export * from "./inspection-selectors";
 export * from "./queue";
 export * from "./presentation";
+export * from "./mission-brief";
 export const dataset: InspectionDataset = challenge;
 export const emptyDataset: InspectionDataset = {
   missions: [],

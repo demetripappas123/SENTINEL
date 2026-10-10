@@ -10,7 +10,6 @@ from app.schemas.canonical import (
     Location,
     Mission,
     Reading,
-    ReplayEvent,
 )
 from app.schemas.queue import QueueItem, QueueUpdate, Verdict
 
@@ -249,10 +248,6 @@ def _claim_row(row: AnomalyClaim) -> tuple:
     )
 
 
-def _event_row(row: ReplayEvent) -> tuple:
-    return (row.source.value, row.event_id, row.mission_id, row.timestamp, row.event_type, Json(row.details))
-
-
 def _queue_row(row: QueueItem) -> tuple:
     source, action_id = row.id.split(":", 1)
     return (
@@ -355,17 +350,6 @@ ON CONFLICT (source, anomaly_id) DO UPDATE SET
     severity = EXCLUDED.severity,
     operator_review_required = EXCLUDED.operator_review_required,
     description = EXCLUDED.description
-"""
-
-_EVENT = """
-INSERT INTO sentinel.replay_events (
-    source, event_id, mission_id, timestamp, event_type, details
-) VALUES (%s, %s, %s, %s, %s, %s)
-ON CONFLICT (source, event_id) DO UPDATE SET
-    mission_id = EXCLUDED.mission_id,
-    timestamp = EXCLUDED.timestamp,
-    event_type = EXCLUDED.event_type,
-    details = EXCLUDED.details
 """
 
 _QUEUE = """

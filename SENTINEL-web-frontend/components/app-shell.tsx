@@ -47,7 +47,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const inspectionState = useInspectionState();
   const queueState = useQueueState();
   const requests =
-    path === "/" || path.startsWith("/review")
+    path === "/" ||
+    path.startsWith("/review") ||
+    path.startsWith("/missions")
       ? [inspectionState, queueState]
       : [inspectionState];
   const { reviewedIds } = useReviews();
