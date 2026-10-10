@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
-import httpx
 import pandas as pd
 from dotenv import load_dotenv
-from google import genai
-from google.genai import errors, types
+
+load_dotenv()
 
 ROOT = Path(__file__).resolve().parents[1]
 LOGGER = logging.getLogger(__name__)
-MODEL = "gemini-2.5-flash"
 EXPECTED_FILES = (
     "missions.csv", "actions.csv", "anomalies.csv", "readings.csv",
     "assets.csv", "locations.csv", "replay.ndjson",
@@ -112,7 +113,7 @@ def _summarize_frame(filename: str, frame: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def _build_system_context() -> str:
+def _build_system_context(*, raise_errors: bool = False) -> str:
     data_dir = _data_directory()
     sections = ["Local SPOT dataset snapshot (not a live feed)."]
     loaded = 0
@@ -132,6 +133,8 @@ def _build_system_context() -> str:
             sections.append(_summarize_frame(filename, frame))
             loaded += int(not frame.empty)
         except (OSError, ValueError, pd.errors.ParserError) as exc:
+            if raise_errors:
+                raise
             LOGGER.warning("Unable to load SPOT dataset %s (%s)", filename, type(exc).__name__)
             sections.append(f"{filename}: unavailable ({type(exc).__name__}); do not infer its contents.")
     if not loaded:
@@ -139,50 +142,48 @@ def _build_system_context() -> str:
     return "\n\n".join(sections)
 
 
-def handle_operator_chat(user_question: str) -> str:
-    """Return an operator-facing answer, or a safe explanatory error string.
-
-    Reload data on every question so updates are reflected. Existing environment
-    variables take precedence over the root .env file. No network call is made
-    when the question, credentials, or datasets are unavailable.
-    """
+def handle_operator_chat(user_question: str, *, raise_errors: bool = False) -> str:
+    """Return an operator-facing answer using the modern official google-genai SDK."""
     if not isinstance(user_question, str) or not user_question.strip():
         return "Please provide a non-empty operator question."
+    
     try:
-        load_dotenv(ROOT / ".env")
-        api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        # 1. Gather the API key securely
+        api_key = (os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or "").strip()
         if not api_key:
-            return "Assistant configuration error: set GEMINI_API_KEY in the root .env file."
-        context = _build_system_context()
+            return "Assistant configuration error: set GOOGLE_API_KEY or GEMINI_API_KEY in the root .env file."
+        
+        # 2. Gather our local hackathon CSV/JSON database summary data
+        context = _build_system_context(raise_errors=True) if raise_errors else _build_system_context()
     except (OSError, ValueError) as exc:
+        if raise_errors:
+            raise
         LOGGER.warning("SPOT assistant data/configuration unavailable (%s)", type(exc).__name__)
         return "SPOT data is unavailable. Check the 02_DATA directory and its CSV/NDJSON files."
 
     try:
-        with genai.Client(
-            api_key=api_key,
-            vertexai=False,
-            http_options=types.HttpOptions(timeout=30_000),
-        ) as client:
-            response = client.models.generate_content(
-                model=MODEL,
-                contents=user_question.strip(),
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION + "\n\n" + context,
-                    temperature=0.2,
-                    max_output_tokens=2048,
-                ),
-            )
-        if not response.text or not response.text.strip():
-            return "Gemini returned no answer. Please rephrase the question or try again."
-        return response.text.strip()
-    except errors.APIError as exc:
-        LOGGER.warning("Gemini service request failed (code=%s)", exc.code)
-        return "The Gemini service could not complete the request. Check API access and quota, then try again."
-    except (httpx.RequestError, ConnectionError, TimeoutError, OSError) as exc:
-        LOGGER.warning("Gemini connection failed (%s)", type(exc).__name__)
-        return "Unable to reach Gemini. Check the network connection and try again."
+        # 3. Import the clean official modern SDK natively
+        from google import genai
+        
+        # 4. Initialize the developer client explicitly targeting AI Studio
+        client = genai.Client(api_key=api_key)
+        
+        # 5. Package the prompt with our dataset tables
+        final_prompt = (
+            SYSTEM_INSTRUCTION + "\n\n" + context
+            + "\n\nOperator question:\n" + user_question.strip()
+        )
+        
+        # 6. Request generation from the stable flash model endpoint
+        response = client.models.generate_content(
+            model='gemini-3.8-flash',
+            contents=final_prompt
+        )
+        
+        return response.text
+        
     except Exception as exc:
-        # Keep SDK/provider failures from crashing the operator-facing caller.
-        LOGGER.error("Unexpected Gemini assistant failure (%s)", type(exc).__name__)
-        return "The assistant encountered an unexpected error. Please try again."
+        if raise_errors:
+            raise
+        LOGGER.error("Gemini network transaction failed (%s)", type(exc).__name__)
+        return f"The AI Assistant could not process the query due to a runtime network issue: {str(exc)}"
