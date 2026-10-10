@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import {
-  Boxes,
   History,
   LayoutDashboard,
   Map,
@@ -16,13 +15,10 @@ import {
 } from "lucide-react";
 import { selectQueue } from "@sentinel/core";
 import { useReviews, useTheme } from "../lib/browser-state";
-import {
-  pendingCount,
-  useInspectionData,
-  useInspectionDetailReady,
-  useInspectionReady,
-} from "../lib/inspection-data";
-import { useQueue, useQueueReady } from "../lib/queue-data";
+import { useInspectionData, useInspectionState } from "../lib/inspection-data";
+import { useQueue, useQueueState } from "../lib/queue-data";
+import { DataBoundary } from "./data-boundary";
+import { AssistantButton } from "./assistant-button";
 import { cn } from "@/lib/utils";
 import { Button, Tag } from "./ui";
 
@@ -40,7 +36,6 @@ function storedRange(missions: { start_time: string | null }[]) {
 const navigation = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/missions", label: "Missions", icon: Route },
-  { href: "/assets", label: "Assets", icon: Boxes },
   { href: "/review", label: "Review", icon: TriangleAlert },
   { href: "/facility", label: "Facility", icon: Map },
   { href: "/replay", label: "Replay", icon: History },
@@ -48,27 +43,34 @@ const navigation = [
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const data = useInspectionData();
-  const dataReady = useInspectionReady();
-  const detailReady = useInspectionDetailReady();
   const queue = useQueue();
-  const queueReady = useQueueReady();
+  const inspectionState = useInspectionState();
+  const queueState = useQueueState();
+  const requests =
+    path === "/" ||
+    path.startsWith("/review") ||
+    path.startsWith("/missions")
+      ? [inspectionState, queueState]
+      : [inspectionState];
   const { reviewedIds } = useReviews();
   const { theme, toggleTheme } = useTheme();
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
-  const counts: Record<string, number | string | undefined> = {
-    "/missions": dataReady ? data.missions.length : pendingCount,
-    "/assets": dataReady ? data.assets.length : pendingCount,
-    "/review": dataReady && queueReady ? selectQueue(queue, { reviewedIds }).length : pendingCount,
-    "/facility": dataReady ? data.locations.length : pendingCount,
-    "/replay": detailReady ? data.events.length : pendingCount,
+  const counts: Record<string, number | undefined> = {
+    "/missions": data.missions.length,
+    "/review": selectQueue(queue, { reviewedIds }).length,
+    "/facility": data.locations.length,
+    "/replay": data.events.length,
   };
   return (
-    <div className="grid h-dvh grid-cols-[212px_minmax(0,1fr)] grid-rows-[52px_minmax(0,1fr)] bg-background text-foreground">
+    <div className="app-frame grid h-dvh grid-cols-[212px_minmax(0,1fr)] grid-rows-[52px_minmax(0,1fr)] bg-background text-foreground">
       <header className="col-span-2 flex items-center gap-4 border-b px-5">
-        <Link className="flex items-center gap-2 text-base font-semibold tracking-wide" href="/">
+        <Link
+          className="flex items-center gap-2 text-base font-semibold tracking-wide"
+          href="/"
+        >
           <Image
             src="/logo.png"
             alt=""
@@ -82,6 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <span className="text-xs text-muted-foreground">NextEra / SPOT</span>
         <span className="flex-1" />
         <Tag>Synthetic data</Tag>
+        <AssistantButton />
         <Button
           className="quiet square"
           onClick={toggleTheme}
@@ -132,7 +135,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Icon className="size-4" />
                 <span>{label}</span>
                 <span className="ml-auto font-mono text-[10px]">
-                  {counts[href]}
+                  {(href === "/review"
+                    ? queueState.status
+                    : inspectionState.status) === "ready"
+                    ? counts[href]
+                    : "—"}
                 </span>
               </Link>
             );
@@ -140,14 +147,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="mt-auto border-t px-2 pt-3 text-[11px] text-muted-foreground">
           <p className="font-mono">
-            {dataReady ? data.missions.length : pendingCount} missions ·{" "}
-            {dataReady ? data.actions.length : pendingCount} actions
+            {inspectionState.status === "ready"
+              ? `${data.missions.length} missions · ${data.actions.length} actions`
+              : inspectionState.status === "error"
+                ? "Data unavailable"
+                : "Fetching records…"}
           </p>
-          <p className="mt-1.5">{dataReady ? storedRange(data.missions) : pendingCount}</p>
+          <p className="mt-1.5">
+            {inspectionState.status === "ready"
+              ? storedRange(data.missions)
+              : ""}
+          </p>
         </div>
       </aside>
       <main id="main" className="overflow-auto p-6">
-        {children}
+        <DataBoundary requests={requests}>{children}</DataBoundary>
       </main>
     </div>
   );

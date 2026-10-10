@@ -4,10 +4,14 @@ import { AppShell } from "../components/app-shell";
 import { InspectionDataProvider } from "../lib/inspection-data";
 import { QueueProvider } from "../lib/queue-data";
 import "./globals.css";
-import { Geist } from "next/font/google";
+import localFont from "next/font/local";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = localFont({
+  src: "./fonts/geist-latin.woff2",
+  variable: "--font-sans",
+  weight: "100 900",
+});
 
 export const metadata: Metadata = {
   title: "SENTINEL | SPOT Operations",

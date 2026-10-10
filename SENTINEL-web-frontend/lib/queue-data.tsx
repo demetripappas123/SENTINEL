@@ -1,17 +1,16 @@
 "use client";
-
+import { createContext, useContext, type ReactNode } from "react";
+import { isQueueItem, type QueueItem } from "@sentinel/core/api";
 import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import type { QueueItem } from "@sentinel/core/api";
-
-const QueueContext = createContext<QueueItem[]>([]);
-const QueueReadyContext = createContext(true);
-
+  readyState,
+  useApiResource,
+  type RequestState,
+} from "./use-api-resource";
+const emptyQueue: QueueItem[] = [];
+const QueueContext = createContext<QueueItem[]>(emptyQueue);
+const QueueStateContext = createContext<RequestState>(readyState);
+const isQueue = (value: unknown): value is QueueItem[] =>
+  Array.isArray(value) && value.every(isQueueItem);
 export function QueueProvider({
   initial,
   children,
@@ -19,40 +18,14 @@ export function QueueProvider({
   initial?: QueueItem[];
   children: ReactNode;
 }) {
-  const [items, setItems] = useState<QueueItem[]>(initial ?? []);
-  const [ready, setReady] = useState(initial !== undefined);
-  useEffect(() => {
-    if (initial !== undefined) return;
-    let cancelled = false;
-    fetch("/api/queue")
-      .then((response) => {
-        if (!response.ok) throw new Error("unavailable");
-        return response.json();
-      })
-      .then((value: QueueItem[]) => {
-        if (!cancelled) setItems(value);
-      })
-      .catch(() => {
-        if (!cancelled) setItems([]);
-      })
-      .finally(() => {
-        if (!cancelled) setReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [initial]);
+  const resource = useApiResource("/api/queue", initial, emptyQueue, isQueue);
   return (
-    <QueueReadyContext.Provider value={ready}>
-      <QueueContext.Provider value={items}>{children}</QueueContext.Provider>
-    </QueueReadyContext.Provider>
+    <QueueStateContext.Provider value={resource}>
+      <QueueContext.Provider value={resource.data}>
+        {children}
+      </QueueContext.Provider>
+    </QueueStateContext.Provider>
   );
 }
-
-export function useQueue(): QueueItem[] {
-  return useContext(QueueContext);
-}
-
-export function useQueueReady(): boolean {
-  return useContext(QueueReadyContext);
-}
+export const useQueue = () => useContext(QueueContext);
+export const useQueueState = () => useContext(QueueStateContext);

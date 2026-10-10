@@ -4,7 +4,13 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { Configuration } from "@sentinel/core";
 import { Badge } from "@/components/ui/badge";
 import { Button as ShadButton } from "@/components/ui/button";
-import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export function Button({
@@ -13,11 +19,12 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
   const names = className.split(/\s+/);
-  const variant = names.includes("green") || names.includes("blue")
-    ? "default"
-    : names.includes("quiet")
-      ? "ghost"
-      : "outline";
+  const variant =
+    names.includes("green") || names.includes("blue")
+      ? "default"
+      : names.includes("quiet")
+        ? "ghost"
+        : "outline";
   const size = names.includes("square") ? "icon" : "sm";
   return (
     <ShadButton type="button" variant={variant} size={size} {...props}>
@@ -43,9 +50,7 @@ export function Tag({
   tone?: string;
 }) {
   const variant = badgeTone[tone as keyof typeof badgeTone] ?? "default";
-  return (
-    <Badge variant={variant}>{children}</Badge>
-  );
+  return <Badge variant={variant}>{children}</Badge>;
 }
 
 export function Panel({
@@ -65,7 +70,7 @@ export function Panel({
     <Card className={className}>
       <CardHeader className="border-b">
         <CardTitle className="flex items-center gap-2">{title}</CardTitle>
-        {action}
+        {action && <CardAction>{action}</CardAction>}
       </CardHeader>
       {children}
       {footer && <CardFooter className="panel-footer">{footer}</CardFooter>}
@@ -86,13 +91,11 @@ export function PageHeading({
     <div className="mb-4 flex items-end justify-between gap-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
-      </div>
-      <div className="flex items-center gap-2">
-        {children || (
-          <span className="text-sm text-muted-foreground">Sep 1–10, 2026</span>
+        {subtitle && (
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         )}
       </div>
+      <div className="flex items-center gap-2">{children}</div>
     </div>
   );
 }
@@ -153,7 +156,10 @@ export function LoadingStatus({
 
 export function Empty({ title = "No matching findings" }: { title?: string }) {
   return (
-    <div className="flex flex-col gap-1 py-8 text-muted-foreground" role="status">
+    <div
+      className="flex flex-col gap-1 py-8 text-muted-foreground"
+      role="status"
+    >
       <h3 className="text-base font-medium text-foreground">{title}</h3>
       <p className="text-sm">Try another filter.</p>
     </div>

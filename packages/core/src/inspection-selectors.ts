@@ -101,20 +101,30 @@ export function selectFindingSummary(data: InspectionDataset) {
 }
 
 export function selectDailyMetrics(data: InspectionDataset) {
-  return [...new Set(data.missions.map((m) => m.start_time.slice(0, 10)))]
+  return [
+    ...new Set(
+      data.missions.flatMap((m) =>
+        m.start_time ? [m.start_time.slice(0, 10)] : [],
+      ),
+    ),
+  ]
     .sort()
     .map((date) => {
       const missions = data.missions.filter((m) =>
-        m.start_time.startsWith(date),
+        m.start_time?.startsWith(date),
       );
       const ids = new Set(missions.map((m) => m.mission_id));
       const actions = data.actions.filter((a) => ids.has(a.mission_id));
+      const durations = missions.flatMap((mission) =>
+        mission.duration_min == null ? [] : [mission.duration_min],
+      );
       return {
         date,
         runs: missions.length,
-        averageDuration:
-          missions.reduce((sum, mission) => sum + mission.duration_min, 0) /
-          missions.length,
+        averageDuration: durations.length
+          ? durations.reduce((sum, duration) => sum + duration, 0) /
+            durations.length
+          : 0,
         actionSuccess: actions.length
           ? (actions.filter((a) => a.status === "SUCCESS").length /
               actions.length) *

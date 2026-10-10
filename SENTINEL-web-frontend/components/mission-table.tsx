@@ -10,6 +10,7 @@ import {
   type Mission,
 } from "@sentinel/core";
 import { useInspectionData } from "../lib/inspection-data";
+import { missionName, operatorText } from "../lib/operator-copy";
 import { Tag } from "./ui";
 
 export function MissionTable({
@@ -36,20 +37,17 @@ export function MissionTable({
           {missions.map((m) => {
             const actions = missionActions(data, m.mission_id),
               passed = actions.filter((a) => a.status === "SUCCESS").length,
+              failed = actions.filter((a) => a.status === "FAILED").length,
+              awaiting = actions.length - passed - failed,
               label = missionLabel(m);
             return (
               <tr key={m.mission_id}>
                 <td>
                   <Link
                     className="mission-link"
-                    href={"/missions/" + m.mission_id}
+                    href={"/missions/" + encodeURIComponent(m.mission_id)}
                   >
-                    <span className="mono">{m.mission_id}</span>
-                    <span>
-                      {/^M\d+$/.test(m.mission_id)
-                        ? "Route " + Number(m.mission_id.slice(1))
-                        : m.mission_name}
-                    </span>
+                    <span>{missionName(data, m.mission_id)}</span>
                   </Link>
                   {full && (
                     <small className="muted">{shortTime(m.start_time)}</small>
@@ -67,7 +65,7 @@ export function MissionTable({
                             : ""
                     }
                   >
-                    {humanize(label)}
+                    {operatorText(humanize(label))}
                   </Tag>
                 </td>
                 <td className="number">
@@ -82,7 +80,13 @@ export function MissionTable({
                         {actions.map((a) => (
                           <i
                             key={a.action_id}
-                            className={a.status === "FAILED" ? "failed" : ""}
+                            className={
+                              a.status === "FAILED"
+                                ? "failed"
+                                : a.status === "SUCCESS"
+                                  ? ""
+                                  : "awaiting"
+                            }
                           />
                         ))}
                       </div>
@@ -93,15 +97,27 @@ export function MissionTable({
                   {full ? (
                     <Tag tone="blue">
                       {m.configuration_version || m.scenario
-                        ? pending(m.configuration_version) +
+                        ? operatorText(
+                            pending(m.configuration_version),
+                            "Not specified",
+                          ) +
                           " · " +
-                          (m.scenario ? humanize(m.scenario) : "—")
+                          (m.scenario
+                            ? operatorText(
+                                humanize(m.scenario),
+                                "Not specified",
+                              )
+                            : "—")
                         : "—"}
                     </Tag>
                   ) : actions.length === 0 ? (
                     <span className="muted small">No actions</span>
-                  ) : actions.length > passed ? (
-                    <Tag tone="amber">{actions.length - passed} failed</Tag>
+                  ) : failed > 0 ? (
+                    <Tag tone="amber">{failed} failed</Tag>
+                  ) : awaiting > 0 ? (
+                    <span className="muted small">
+                      {awaiting} awaiting outcome
+                    </span>
                   ) : (
                     <span className="muted small">No failures</span>
                   )}

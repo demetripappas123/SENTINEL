@@ -4,26 +4,25 @@ import { useState } from "react";
 import {
   actionFindings,
   humanize,
-  formatFindingDescription,
-  locationName,
+  nextStepForFailure,
   missionActions,
   missionLabel,
   pending,
   shortTime,
 } from "@sentinel/core";
 import { PageHeading, Panel, severityTone, Tag } from "../components/ui";
-import { Capture } from "../components/findings";
 import {
-  pendingCount,
-  useInspectionData,
-  useInspectionDetailReady,
-  useInspectionReady,
-} from "../lib/inspection-data";
+  equipmentName,
+  missionName,
+  operatorText,
+  placeName,
+} from "../lib/operator-copy";
+import { Capture } from "../components/findings";
+import { useInspectionData, useInspectionReady } from "../lib/inspection-data";
 
 export function MissionDetail({ missionId }: { missionId: string }) {
   const data = useInspectionData();
   const ready = useInspectionReady();
-  const detailReady = useInspectionDetailReady();
   const mission = data.missions.find((m) => m.mission_id === missionId),
     actions = missionActions(data, missionId);
   const [selectedId, setSelectedId] = useState(
@@ -31,16 +30,7 @@ export function MissionDetail({ missionId }: { missionId: string }) {
   );
   const selected =
     actions.find((a) => a.action_id === selectedId) || actions[0];
-  if (!ready) {
-    return (
-      <>
-        <PageHeading title="Mission" />
-        <Panel title={pendingCount}>
-          <p className="panel-body">{pendingCount} / {pendingCount} successful</p>
-        </Panel>
-      </>
-    );
-  }
+  if (!ready) return <p>Loading mission.</p>;
   if (!mission) return <p>Mission unavailable.</p>;
   const passed = actions.filter((a) => a.status === "SUCCESS").length;
   const label = missionLabel(mission);
@@ -51,21 +41,19 @@ export function MissionDetail({ missionId }: { missionId: string }) {
   return (
     <>
       <PageHeading
-        title={
-          /^M\d+$/.test(missionId)
-            ? "Route " + Number(missionId.slice(1))
-            : mission.mission_name
-        }
+        title={missionName(data, missionId)}
         subtitle={
-          missionId +
-          " · " +
           shortTime(mission.start_time) +
           (mission.configuration_version
-            ? " · " + mission.configuration_version
+            ? " · " +
+              operatorText(mission.configuration_version, "Not specified")
             : "")
         }
       >
-        <Link className="btn green" href={"/review?mission=" + missionId}>
+        <Link
+          className="btn green"
+          href={"/review?mission=" + encodeURIComponent(missionId)}
+        >
           Findings →
         </Link>
       </PageHeading>
@@ -83,7 +71,7 @@ export function MissionDetail({ missionId }: { missionId: string }) {
                     : ""
             }
           >
-            {humanize(label)}
+            {operatorText(humanize(label))}
           </Tag>
         </div>
         <div className="datum">
@@ -94,12 +82,13 @@ export function MissionDetail({ missionId }: { missionId: string }) {
         </div>
         <div className="datum">
           <span className="small muted">Failed</span>
-          <strong>{actions.length - passed}</strong>
+          <strong>{actions.filter((a) => a.status === "FAILED").length}</strong>
         </div>
         <div className="datum">
           <span className="small muted">Battery</span>
           <strong>
-            {mission.start_battery_pct == null && mission.end_battery_pct == null
+            {mission.start_battery_pct == null &&
+            mission.end_battery_pct == null
               ? "Pending"
               : pending(mission.start_battery_pct) +
                 "% → " +
@@ -129,7 +118,7 @@ export function MissionDetail({ missionId }: { missionId: string }) {
                 <tr>
                   <th>#</th>
                   <th>Action</th>
-                  <th>Waypoint</th>
+                  <th>Location</th>
                   <th>Outcome</th>
                   <th>Battery</th>
                 </tr>
@@ -160,20 +149,24 @@ export function MissionDetail({ missionId }: { missionId: string }) {
                         className="action-select"
                         aria-pressed={a.action_id === selected?.action_id}
                         onClick={() => setSelectedId(a.action_id)}
-                        aria-label={humanize(a.action_type) + " " + a.action_id}
+                        aria-label={
+                          operatorText(humanize(a.action_type)) +
+                          " check " +
+                          (a.sequence ?? "") +
+                          " at " +
+                          placeName(data, a.location_id)
+                        }
                       >
-                        {humanize(a.action_type)}
+                        {operatorText(humanize(a.action_type))}
                         <span>
-                          {(a.timestamp ? a.timestamp.slice(11, 16) : "Pending") +
-                            " · " +
-                            a.action_id}
+                          {a.timestamp ? a.timestamp.slice(11, 16) : "Pending"}
                         </span>
                       </button>
                     </td>
-                    <td className="mono">{pending(a.location_id)}</td>
+                    <td>{placeName(data, a.location_id)}</td>
                     <td>
                       <Tag tone={a.status === "SUCCESS" ? "green" : "amber"}>
-                        {humanize(a.status)}
+                        {operatorText(humanize(a.status))}
                       </Tag>
                     </td>
                     <td className="mono">
@@ -186,91 +179,103 @@ export function MissionDetail({ missionId }: { missionId: string }) {
           </div>
         </Panel>
         {selected ? (
-        <aside className="panel action-inspector" aria-label="Action evidence">
-          <header className="panel-head">
-            <h2>Evidence</h2>
-            <span className="mono muted">{selected.action_id}</span>
-          </header>
-          <Capture type={selected.action_type} />
-          <dl className="fact-list">
-            <div className="fact">
-              <dt>Outcome</dt>
-              <dd>{humanize(selected.status)}</dd>
-            </div>
-            <div className="fact">
-              <dt>Asset</dt>
-              <dd className="mono">{pending(selected.asset_id)}</dd>
-            </div>
-            <div className="fact">
-              <dt>Waypoint</dt>
-              <dd>{locationName(data, selected.location_id)}</dd>
-            </div>
-            <div className="fact">
-              <dt>Battery</dt>
-              <dd>
-                {selected.battery_pct == null
-                  ? "Pending"
-                  : selected.battery_pct + "%"}
-              </dd>
-            </div>
-            <div className="fact">
-              <dt>Recorded</dt>
-              <dd>{shortTime(selected.timestamp)}</dd>
-            </div>
-          </dl>
-          {selected.status === "FAILED" && (
-            <div className="explanation">
-              <span className="small">Recorded failure</span>
-              <strong>
-                {selected.failure_type
-                  ? humanize(selected.failure_type)
-                  : "Pending"}
-              </strong>
-            </div>
-          )}
-          <div className="inspector-section">Findings</div>
-          {findings.length ? (
-            findings.map((f) => (
-              <div className="reading-row" key={f.anomaly_id}>
-                <span>
-                  <strong>{humanize(f.anomaly_type)}</strong>
-                  <br />
-                  <small className="muted">
-                    {formatFindingDescription(f.description)}
-                  </small>
-                </span>
-                <Tag tone={severityTone(f.severity)}>
-                  {humanize(f.severity)}
-                </Tag>
+          <aside
+            className="panel action-inspector"
+            aria-label="Action evidence"
+          >
+            <header className="panel-head">
+              <h2>Evidence</h2>
+              <span className="small muted">
+                {operatorText(humanize(selected.action_type))}
+              </span>
+            </header>
+            <Capture type={selected.action_type} />
+            <dl className="fact-list">
+              <div className="fact">
+                <dt>Outcome</dt>
+                <dd>{operatorText(humanize(selected.status))}</dd>
               </div>
-            ))
-          ) : (
-            <p className="panel-body small muted">No finding recorded.</p>
-          )}
-          <div className="inspector-section">Measurements</div>
-          {!detailReady ? (
-            <p className="panel-body small muted">{pendingCount}</p>
-          ) : readings.length ? (
-            readings.map((r) => (
-              <div className="reading-row" key={r.reading_id}>
-                <span>
-                  {humanize(r.measurement_type)}
-                  <br />
-                  <small className="muted">
-                    Quality: {humanize(r.quality)}
-                  </small>
-                </span>
+              <div className="fact">
+                <dt>Asset</dt>
+                <dd>{equipmentName(data, selected.asset_id)}</dd>
+              </div>
+              <div className="fact">
+                <dt>Location</dt>
+                <dd>{placeName(data, selected.location_id)}</dd>
+              </div>
+              <div className="fact">
+                <dt>Battery</dt>
+                <dd>
+                  {selected.battery_pct == null
+                    ? "Pending"
+                    : selected.battery_pct + "%"}
+                </dd>
+              </div>
+              <div className="fact">
+                <dt>Recorded</dt>
+                <dd>{shortTime(selected.timestamp)}</dd>
+              </div>
+            </dl>
+            {selected.status === "FAILED" && (
+              <div className="explanation">
+                <span className="small">Recorded failure</span>
                 <strong>
-                  {r.value} {r.unit}
+                  {selected.failure_type
+                    ? operatorText(humanize(selected.failure_type))
+                    : "Pending"}
                 </strong>
+                <p className="small">
+                  {nextStepForFailure(selected.failure_type)}
+                </p>
               </div>
-            ))
-          ) : (
-            <p className="panel-body small muted">No reading recorded.</p>
-          )}
-        </aside>
+            )}
+            <div className="inspector-section">Findings</div>
+            {findings.length ? (
+              findings.map((f) => (
+                <div className="reading-row" key={f.anomaly_id}>
+                  <span>
+                    <strong>{operatorText(humanize(f.anomaly_type))}</strong>
+                    <br />
+                    <small className="muted">
+                      {operatorText(
+                        f.description,
+                        "This finding needs a closer inspection.",
+                      )}
+                    </small>
+                  </span>
+                  <Tag tone={severityTone(f.severity)}>
+                    {humanize(f.severity)}
+                  </Tag>
+                </div>
+              ))
+            ) : (
+              <p className="panel-body small muted">No finding recorded.</p>
+            )}
+            <div className="inspector-section">Measurements</div>
+            {readings.length ? (
+              readings.map((r) => (
+                <div className="reading-row" key={r.reading_id}>
+                  <span>
+                    {operatorText(humanize(r.measurement_type))}
+                    <br />
+                    <small className="muted">
+                      Quality: {operatorText(humanize(r.quality))}
+                    </small>
+                  </span>
+                  <strong>
+                    {r.value} {r.unit}
+                  </strong>
+                </div>
+              ))
+            ) : (
+              <p className="panel-body small muted">No reading recorded.</p>
+            )}
+          </aside>
         ) : (
-          <aside className="panel action-inspector" aria-label="Action evidence">
+          <aside
+            className="panel action-inspector"
+            aria-label="Action evidence"
+          >
             <header className="panel-head">
               <h2>Evidence</h2>
             </header>

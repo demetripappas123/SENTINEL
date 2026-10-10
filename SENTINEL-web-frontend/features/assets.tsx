@@ -2,19 +2,16 @@
 
 import { humanize, locationName } from "@sentinel/core";
 import { PageHeading, Panel } from "../components/ui";
-import { pendingCount, useInspectionData, useInspectionReady } from "../lib/inspection-data";
+import { useInspectionData } from "../lib/inspection-data";
 
 export function Assets() {
   const data = useInspectionData();
-  const ready = useInspectionReady();
   const assets = data.assets.slice().sort((a, b) => a.asset_id.localeCompare(b.asset_id));
   return (
     <>
       <PageHeading title="Assets" />
-      <Panel title={(ready ? assets.length : pendingCount) + " assets"}>
-        {!ready ? (
-          <p className="panel-body">{pendingCount}</p>
-        ) : assets.length === 0 ? (
+      <Panel title={assets.length + " assets"}>
+        {assets.length === 0 ? (
           <p className="panel-body">No assets in the current dataset.</p>
         ) : (
           <div className="table-wrap">

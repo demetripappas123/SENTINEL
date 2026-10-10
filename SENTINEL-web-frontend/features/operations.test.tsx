@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { dataset } from "@sentinel/core";
 import type { QueueItem } from "@sentinel/core/api";
 import { InspectionDataProvider } from "../lib/inspection-data";
@@ -17,7 +17,8 @@ const queued: QueueItem[] = [
     id: "kit:A0146",
     verdict: "inspection_failure",
     cause: "SENSOR_TIMEOUT",
-    explanation: "Gauge reading failed: SENSOR_TIMEOUT. Mission M015 is still completed.",
+    explanation:
+      "Gauge reading failed: SENSOR_TIMEOUT. Mission M015 is still completed.",
     mission_id: "M015",
     action_id: "A0146",
     asset_id: "HX-204",
@@ -36,21 +37,6 @@ function renderStored(ui: ReactNode) {
 }
 
 describe("dashboard workflows", () => {
-  it("shows a loading state instead of zero counts before data arrives", () => {
-    vi.stubGlobal("fetch", () => new Promise(() => {}));
-    render(
-      <InspectionDataProvider>
-        <QueueProvider>
-          <Overview />
-        </QueueProvider>
-      </InspectionDataProvider>,
-    );
-    expect(screen.getByRole("region", { name: "Operational metrics" })).toBeInTheDocument();
-    expect(screen.getAllByText("--.-%").length).toBeGreaterThan(0);
-    expect(screen.queryByText("0.0")).not.toBeInTheDocument();
-    vi.unstubAllGlobals();
-  });
-
   it("changes operational metrics when selecting V2", async () => {
     renderStored(<Overview />);
     await userEvent.click(
@@ -63,7 +49,7 @@ describe("dashboard workflows", () => {
     renderStored(<ReviewQueue />);
     await userEvent.type(screen.getByRole("searchbox"), "HX-204");
     const row = screen.getByRole("button", {
-      name: /Sensor timeout.*HX-204/,
+      name: /Sensor timeout.*Heat Exchanger 04/,
     });
     expect(row).toHaveAccessibleName(/Inspection failure/);
     await userEvent.click(row);
@@ -75,7 +61,7 @@ describe("dashboard workflows", () => {
     expect(screen.getByText("No matching queue items")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Reviewed" }));
     expect(
-      screen.getByRole("button", { name: /Sensor timeout.*HX-204/ }),
+      screen.getByRole("button", { name: /Sensor timeout.*Heat Exchanger 04/ }),
     ).toBeInTheDocument();
   });
   it("shows an empty state when a search does not match", async () => {
@@ -86,7 +72,11 @@ describe("dashboard workflows", () => {
   it("shows the selected action's recorded failure and battery", async () => {
     renderStored(<MissionDetail missionId="M015" />);
     expect(screen.getByText("7 / 10 successful")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /A0146/ }));
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Acoustic inspection check 6 at Pump Bay/,
+      }),
+    );
     const evidence = screen.getByRole("complementary", {
       name: "Action evidence",
     });
@@ -112,7 +102,9 @@ describe("dashboard workflows", () => {
     expect(screen.getByText("Actions").parentElement).toHaveTextContent("9");
     expect(screen.getByText("Findings").parentElement).toHaveTextContent("1");
     expect(
-      screen.queryByRole("button", { name: /Signal degradation.*PANEL-203/ }),
+      screen.queryByRole("button", {
+        name: /Signal degradation.*Electrical Panel 03/,
+      }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^WP05/ })).toHaveTextContent(
       "1 failed",
@@ -124,7 +116,7 @@ describe("dashboard workflows", () => {
     await userEvent.click(
       screen.getByRole("radio", { name: "Improved configuration" }),
     );
-    expect(screen.getAllByText("M019").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Route 19").length).toBeGreaterThan(0);
     expect(screen.getByText("1 / 104")).toBeInTheDocument();
     expect(screen.getByRole("slider")).toHaveAttribute("max", "103");
     expect(screen.getByRole("slider")).toHaveValue("0");
@@ -134,7 +126,7 @@ describe("dashboard workflows", () => {
   });
   it("shows only findings linked to the selected mission action", async () => {
     renderStored(<MissionDetail missionId="M015" />);
-    await userEvent.click(screen.getByRole("button", { name: /A0141/ }));
+    await userEvent.click(screen.getByRole("button", { name: /check 1 at/ }));
     const evidence = screen.getByRole("complementary", {
       name: "Action evidence",
     });
@@ -144,7 +136,11 @@ describe("dashboard workflows", () => {
     expect(
       within(evidence).getByText("Signal degradation detected."),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /A0146/ }));
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Acoustic inspection check 6 at Pump Bay/,
+      }),
+    );
     expect(
       within(evidence).queryByText("Signal degradation"),
     ).not.toBeInTheDocument();
@@ -159,6 +155,25 @@ describe("dashboard workflows", () => {
     const { fireEvent } = await import("@testing-library/react");
     fireEvent.change(slider, { target: { value: "15" } });
     expect(screen.getByText("16 / 500")).toBeInTheDocument();
-    expect(screen.getByText(/ends during M023/)).toBeInTheDocument();
+    expect(screen.getByText(/ends during Route 23/)).toBeInTheDocument();
   });
+});
+
+it("filters dashboard charts and links review priorities to the selected configuration", async () => {
+  renderStored(<Overview />);
+  expect(
+    screen.getByRole("img", { name: /daily action success/i }),
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText("Review breakdown")).toHaveTextContent(
+    "1 inspection to retry",
+  );
+  await userEvent.click(
+    screen.getByRole("radio", { name: "Improved configuration" }),
+  );
+  expect(screen.getByLabelText("Review breakdown")).toHaveTextContent(
+    "0 inspections to retry",
+  );
+  expect(
+    screen.getByRole("link", { name: /open review queue/i }),
+  ).toHaveAttribute("href", "/review?configuration=IMPROVED");
 });

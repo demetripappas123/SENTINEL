@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
 import { missionBrief, type Configuration, type CountBar } from "@sentinel/core";
-import { useQueue, useQueueReady } from "../lib/queue-data";
+import { useQueue } from "../lib/queue-data";
 import { ConfigurationControl, PageHeading, Panel } from "../components/ui";
 import { MissionTable } from "../components/mission-table";
-import { pendingCount, useInspectionData, useInspectionReady } from "../lib/inspection-data";
+import { useInspectionData } from "../lib/inspection-data";
 
 const ISSUE_LABELS: Record<string, string> = {
   failed_action: "Failed Action",
@@ -24,14 +24,12 @@ function titleCase(value: string) {
 export function Missions() {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
   const data = useInspectionData();
-  const ready = useInspectionReady();
   const queue = useQueue();
-  const queueReady = useQueueReady();
   const missions = data.missions
     .filter((m) => configuration === "ALL" || m.scenario === configuration)
     .slice()
     .reverse();
-  const brief = ready && queueReady ? missionBrief(data, queue, configuration) : null;
+  const brief = missionBrief(data, queue, configuration);
   return (
     <>
       <PageHeading title="Missions" />
@@ -44,46 +42,40 @@ export function Missions() {
       <div className="mission-brief">
         <Panel title="Action failures" action={<span className="small muted">By failure type</span>}>
           <Bars
-            rows={brief?.failureTypes ?? []}
+            rows={brief.failureTypes}
             label={(row) => titleCase(row.key)}
-            ready={brief != null}
           />
         </Panel>
         <Panel title="Mission issues" action={<span className="small muted">By evidence rule</span>}>
-          <IssueCircle rows={brief?.issues ?? []} ready={brief != null} />
+          <IssueCircle rows={brief.issues} />
         </Panel>
       </div>
       <Panel title="Interpretation" className="interpretation-panel">
-        {brief == null ? (
-          <p className="panel-body">{pendingCount}</p>
-        ) : (
-          <div className="interpretation">
-            <p>{brief.interpretation.lead}</p>
-            {brief.interpretation.steps.length ? (
-              <ul>
-                {brief.interpretation.steps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ul>
-            ) : null}
-            {brief.interpretation.notes.map((note) => (
-              <p key={note}>{note}</p>
-            ))}
-          </div>
-        )}
+        <div className="interpretation">
+          <p>{brief.interpretation.lead}</p>
+          {brief.interpretation.steps.length ? (
+            <ul>
+              {brief.interpretation.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ul>
+          ) : null}
+          {brief.interpretation.notes.map((note) => (
+            <p key={note}>{note}</p>
+          ))}
+        </div>
       </Panel>
       <Panel
-        title={(ready ? missions.length : pendingCount) + " missions"}
+        title={missions.length + " missions"}
         action={<span className="small muted">Latest first</span>}
       >
-        {ready ? <MissionTable missions={missions} full /> : <p className="panel-body">{pendingCount}</p>}
+        <MissionTable missions={missions} full />
       </Panel>
     </>
   );
 }
 
-function IssueCircle({ rows, ready }: { rows: CountBar[]; ready: boolean }) {
-  if (!ready) return <p className="panel-body">{pendingCount}</p>;
+function IssueCircle({ rows }: { rows: CountBar[] }) {
   const total = rows.reduce((sum, row) => sum + row.count, 0);
   const colorAt = (index: number) => scaleColor(rows.length <= 1 ? 0 : index / (rows.length - 1));
   const slices = rows
@@ -133,26 +125,22 @@ function yAxisColor(index: number, count: number) {
 function Bars({
   rows,
   label,
-  ready,
 }: {
   rows: CountBar[];
   label: (row: CountBar) => string;
-  ready: boolean;
 }) {
   const max = Math.max(1, ...rows.map((row) => row.count));
-  const visible = ready ? rows : [];
-  if (!ready) return <p className="panel-body">{pendingCount}</p>;
-  if (!visible.length) return <p className="panel-body">None recorded.</p>;
+  if (!rows.length) return <p className="panel-body">None recorded.</p>;
   return (
     <div className="diagram-list">
-      {visible.map((row, index) => {
+      {rows.map((row, index) => {
         const name = label(row);
         const width = row.count === 0 ? 0 : Math.max(4, (row.count / max) * 100);
         return (
           <div className="diagram-row" key={row.key}>
             <span>{name}</span>
             <div className="bar" role="img" aria-label={`${name}: ${row.count}`}>
-              <span style={{ width: width + "%", background: yAxisColor(index, visible.length) }} />
+              <span style={{ width: width + "%", background: yAxisColor(index, rows.length) }} />
             </div>
             <span className="percent">{row.count}</span>
           </div>

@@ -28,11 +28,15 @@ def test_kit_dataset_matches_the_bundled_frontend_fixture(key):
     assert dataset[key] == _project(fixture[key], dataset[key])
 
 
-def test_kit_replay_events_match_the_bundled_frontend_fixture():
-    fixture = json.loads(FIXTURE.read_text())
+def test_kit_replay_includes_all_recorded_mission_and_action_outcomes():
+    # The API now derives the full timeline; the bundled fixture is a partial stream.
     events = to_dataset(map_kit(KIT_DATA)).model_dump(mode="json")["events"]
-    assert len(events) == 500
-    assert events == sorted(fixture["events"], key=lambda event: event["event_id"])
+    assert len(events) == 594
+    assert [event["timestamp"] for event in events] == sorted(event["timestamp"] for event in events)
+    assert len([event for event in events if event["event_type"] == "ACTION_STARTED"]) == 270
+    assert len([event for event in events if event["event_type"] in {"ACTION_COMPLETED", "ACTION_FAILED"}]) == 270
+    assert events[-1]["mission_id"] == "M027"
+    assert events[-1]["event_type"] == "MISSION_COMPLETED"
 
 
 def test_every_kit_replay_event_belongs_to_a_kit_mission():
