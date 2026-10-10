@@ -3,40 +3,51 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   actionFindings,
-  dataset,
   humanize,
   formatFindingDescription,
   locationName,
   missionActions,
+  missionLabel,
+  pending,
   shortTime,
 } from "@sentinel/core";
 import { PageHeading, Panel, severityTone, Tag } from "../components/ui";
 import { Capture } from "../components/findings";
+import { useInspectionData, useInspectionReady } from "../lib/inspection-data";
 
 export function MissionDetail({ missionId }: { missionId: string }) {
-  const mission = dataset.missions.find((m) => m.mission_id === missionId),
-    actions = missionActions(missionId);
+  const data = useInspectionData();
+  const ready = useInspectionReady();
+  const mission = data.missions.find((m) => m.mission_id === missionId),
+    actions = missionActions(data, missionId);
   const [selectedId, setSelectedId] = useState(
     (actions.find((a) => a.status === "FAILED") || actions[0])?.action_id,
   );
   const selected =
     actions.find((a) => a.action_id === selectedId) || actions[0];
-  if (!mission || !selected) return <p>Mission unavailable.</p>;
+  if (!ready) return <p>Loading mission.</p>;
+  if (!mission) return <p>Mission unavailable.</p>;
   const passed = actions.filter((a) => a.status === "SUCCESS").length;
-  const readings = dataset.readings.filter(
-    (r) => r.action_id === selected.action_id,
-  );
-  const findings = actionFindings(selected.action_id);
+  const label = missionLabel(mission);
+  const readings = selected
+    ? data.readings.filter((r) => r.action_id === selected.action_id)
+    : [];
+  const findings = selected ? actionFindings(data, selected.action_id) : [];
   return (
     <>
       <PageHeading
-        title={"Route " + Number(missionId.slice(1))}
+        title={
+          /^M\d+$/.test(missionId)
+            ? "Route " + Number(missionId.slice(1))
+            : mission.mission_name
+        }
         subtitle={
           missionId +
           " · " +
           shortTime(mission.start_time) +
-          " · " +
-          mission.configuration_version
+          (mission.configuration_version
+            ? " · " + mission.configuration_version
+            : "")
         }
       >
         <Link className="btn green" href={"/review?mission=" + missionId}>
@@ -46,8 +57,18 @@ export function MissionDetail({ missionId }: { missionId: string }) {
       <div className="summary-band">
         <div className="datum">
           <span className="small muted">Status</span>
-          <Tag tone={mission.mission_status === "COMPLETED" ? "green" : "red"}>
-            {humanize(mission.mission_status)}
+          <Tag
+            tone={
+              label === "COMPLETED"
+                ? "green"
+                : label === "FAILED"
+                  ? "red"
+                  : label === "IN_PROGRESS"
+                    ? "amber"
+                    : ""
+            }
+          >
+            {humanize(label)}
           </Tag>
         </div>
         <div className="datum">
@@ -63,12 +84,21 @@ export function MissionDetail({ missionId }: { missionId: string }) {
         <div className="datum">
           <span className="small muted">Battery</span>
           <strong>
-            {mission.start_battery_pct}% → {mission.end_battery_pct}%
+            {mission.start_battery_pct == null && mission.end_battery_pct == null
+              ? "Pending"
+              : pending(mission.start_battery_pct) +
+                "% → " +
+                pending(mission.end_battery_pct) +
+                "%"}
           </strong>
         </div>
         <div className="datum">
           <span className="small muted">Duration</span>
-          <strong>{mission.duration_min} min</strong>
+          <strong>
+            {mission.duration_min == null
+              ? "Pending"
+              : mission.duration_min + " min"}
+          </strong>
         </div>
       </div>
       <div className="investigation">
@@ -90,43 +120,57 @@ export function MissionDetail({ missionId }: { missionId: string }) {
                 </tr>
               </thead>
               <tbody>
+                {actions.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="muted">
+                      No actions yet.
+                    </td>
+                  </tr>
+                )}
                 {actions.map((a) => (
                   <tr
                     key={a.action_id}
                     className={
                       "action-row " +
-                      (selected.action_id === a.action_id ? "selected" : "")
+                      (selected?.action_id === a.action_id ? "selected" : "")
                     }
                   >
                     <td className="mono muted">
-                      {a.sequence.toString().padStart(2, "0")}
+                      {a.sequence == null
+                        ? "—"
+                        : a.sequence.toString().padStart(2, "0")}
                     </td>
                     <td>
                       <button
                         className="action-select"
-                        aria-pressed={a.action_id === selected.action_id}
+                        aria-pressed={a.action_id === selected?.action_id}
                         onClick={() => setSelectedId(a.action_id)}
                         aria-label={humanize(a.action_type) + " " + a.action_id}
                       >
                         {humanize(a.action_type)}
                         <span>
-                          {a.timestamp.slice(11, 16)} · {a.action_id}
+                          {(a.timestamp ? a.timestamp.slice(11, 16) : "Pending") +
+                            " · " +
+                            a.action_id}
                         </span>
                       </button>
                     </td>
-                    <td className="mono">{a.location_id}</td>
+                    <td className="mono">{pending(a.location_id)}</td>
                     <td>
                       <Tag tone={a.status === "SUCCESS" ? "green" : "amber"}>
                         {humanize(a.status)}
                       </Tag>
                     </td>
-                    <td className="mono">{a.battery_pct}%</td>
+                    <td className="mono">
+                      {a.battery_pct == null ? "Pending" : a.battery_pct + "%"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </Panel>
+        {selected ? (
         <aside className="panel action-inspector" aria-label="Action evidence">
           <header className="panel-head">
             <h2>Evidence</h2>
@@ -140,15 +184,19 @@ export function MissionDetail({ missionId }: { missionId: string }) {
             </div>
             <div className="fact">
               <dt>Asset</dt>
-              <dd className="mono">{selected.asset_id}</dd>
+              <dd className="mono">{pending(selected.asset_id)}</dd>
             </div>
             <div className="fact">
               <dt>Waypoint</dt>
-              <dd>{locationName(selected.location_id)}</dd>
+              <dd>{locationName(data, selected.location_id)}</dd>
             </div>
             <div className="fact">
               <dt>Battery</dt>
-              <dd>{selected.battery_pct}%</dd>
+              <dd>
+                {selected.battery_pct == null
+                  ? "Pending"
+                  : selected.battery_pct + "%"}
+              </dd>
             </div>
             <div className="fact">
               <dt>Recorded</dt>
@@ -158,7 +206,11 @@ export function MissionDetail({ missionId }: { missionId: string }) {
           {selected.status === "FAILED" && (
             <div className="explanation">
               <span className="small">Recorded failure</span>
-              <strong>{humanize(selected.failure_type)}</strong>
+              <strong>
+                {selected.failure_type
+                  ? humanize(selected.failure_type)
+                  : "Pending"}
+              </strong>
             </div>
           )}
           <div className="inspector-section">Findings</div>
@@ -200,6 +252,14 @@ export function MissionDetail({ missionId }: { missionId: string }) {
             <p className="panel-body small muted">No reading recorded.</p>
           )}
         </aside>
+        ) : (
+          <aside className="panel action-inspector" aria-label="Action evidence">
+            <header className="panel-head">
+              <h2>Evidence</h2>
+            </header>
+            <p className="panel-body small muted">No actions yet.</p>
+          </aside>
+        )}
       </div>
     </>
   );

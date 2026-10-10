@@ -6,7 +6,6 @@ import { useEffect, useRef } from "react";
 import { Check, TriangleAlert, X } from "lucide-react";
 import {
   assetName,
-  dataset,
   humanize,
   formatFindingDescription,
   locationName,
@@ -14,6 +13,7 @@ import {
   shortTime,
   type Finding,
 } from "@sentinel/core";
+import { useInspectionData } from "../lib/inspection-data";
 import { Button, severityTone, Tag } from "./ui";
 
 export function FindingRow({
@@ -25,6 +25,7 @@ export function FindingRow({
   reviewed?: boolean;
   onOpen: (finding: Finding) => void;
 }) {
+  const data = useInspectionData();
   return (
     <button
       className={
@@ -40,7 +41,7 @@ export function FindingRow({
         ", " +
         f.asset_id +
         ", " +
-        locationName(f.location_id) +
+        locationName(data, f.location_id) +
         (reviewed ? ", reviewed" : "")
       }
     >
@@ -53,7 +54,7 @@ export function FindingRow({
         <strong>{humanize(f.anomaly_type)}</strong>
         <p className="mono">
           {f.asset_id} ·{" "}
-          <span title={locationName(f.location_id)}>{f.location_id}</span> ·{" "}
+          <span title={locationName(data, f.location_id)}>{f.location_id}</span> ·{" "}
           {f.mission_id}
         </p>
       </div>
@@ -98,9 +99,10 @@ export function FindingDialog({
       if (dialog?.open) dialog.close();
     };
   }, [finding]);
+  const data = useInspectionData();
   if (!finding) return null;
-  const action = dataset.actions.find((a) => a.action_id === finding.action_id);
-  const readings = dataset.readings.filter(
+  const action = data.actions.find((a) => a.action_id === finding.action_id);
+  const readings = data.readings.filter(
     (r) => r.action_id === finding.action_id,
   );
   return (
@@ -131,10 +133,10 @@ export function FindingDialog({
         </Button>
       </header>
       <div className="dialog-content">
-        <strong>{assetName(finding.asset_id)}</strong>
+        <strong>{assetName(data, finding.asset_id)}</strong>
         <p className="small muted">
           {finding.asset_id} · {finding.location_id} ·{" "}
-          {locationName(finding.location_id)}
+          {locationName(data, finding.location_id)}
         </p>
         <Capture type={finding.anomaly_type} />
         <dl className="fact-list">
@@ -152,7 +154,9 @@ export function FindingDialog({
           </div>
           <div className="fact">
             <dt>Battery</dt>
-            <dd>{action?.battery_pct ?? "—"}%</dd>
+            <dd>
+              {action?.battery_pct == null ? "Pending" : action.battery_pct + "%"}
+            </dd>
           </div>
         </dl>
         <div className="inspector-section">Measurements</div>

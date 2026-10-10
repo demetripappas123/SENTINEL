@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <div className="empty" role="status">
+    <div className="py-8 text-sm text-muted-foreground" role="status">
       Loading inspections…
     </div>
   );

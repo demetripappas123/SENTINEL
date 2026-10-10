@@ -1,22 +1,24 @@
+"use client";
+
 import Image from "next/image";
-import { dataset } from "@sentinel/core";
+import { useInspectionData } from "../lib/inspection-data";
 
 const points: Record<string, [number, number]> = {
-  WP01: [10, 76],
-  WP02: [10, 52],
-  WP03: [23, 38],
-  WP04: [20, 14],
-  WP05: [41, 36],
-  WP06: [51, 14],
-  WP07: [61, 46],
-  WP08: [35, 67],
-  WP09: [50, 67],
-  WP10: [61, 70],
-  WP11: [78, 22],
-  WP12: [91, 23],
-  WP13: [77, 53],
-  WP14: [91, 58],
-  WP15: [82, 79],
+  WP01: [8.9, 73.9],
+  WP02: [8.3, 51.7],
+  WP03: [21.1, 40.5],
+  WP04: [19.0, 14.3],
+  WP05: [39.5, 37.6],
+  WP06: [50.1, 14.3],
+  WP07: [60.4, 46.2],
+  WP08: [32.0, 67.6],
+  WP09: [48.4, 67.6],
+  WP10: [60.4, 69.2],
+  WP11: [76.7, 22.7],
+  WP12: [90.6, 22.7],
+  WP13: [76.3, 51.8],
+  WP14: [89.6, 53.7],
+  WP15: [82.7, 75.4],
 };
 export function FacilityMap({
   selected,
@@ -25,16 +27,17 @@ export function FacilityMap({
   selected: string;
   onSelect: (id: string) => void;
 }) {
+  const data = useInspectionData();
   return (
     <div className="map-graphic">
       <Image
-        src="/demo/facility.png"
+        src="/demo/facility.jpg"
         alt="Illustrative fictional facility floor plan"
-        width={1095}
-        height={593}
+        width={1024}
+        height={539}
         unoptimized
       />
-      {dataset.locations.map((l) => (
+      {data.locations.map((l) => (
         <button
           key={l.location_id}
           className={

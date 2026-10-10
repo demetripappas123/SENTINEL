@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
-import { dataset, type Configuration } from "@sentinel/core";
+import { type Configuration } from "@sentinel/core";
 import { ConfigurationControl, PageHeading, Panel } from "../components/ui";
 import { MissionTable } from "../components/mission-table";
+import { useInspectionData } from "../lib/inspection-data";
 export function Missions() {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
-  const missions = dataset.missions
+  const data = useInspectionData();
+  const missions = data.missions
     .filter((m) => configuration === "ALL" || m.scenario === configuration)
     .slice()
     .reverse();

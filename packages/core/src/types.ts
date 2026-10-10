@@ -4,36 +4,36 @@ export type FindingStatus = "required" | "all" | "reviewed";
 export interface Mission {
   mission_id: string;
   mission_name: string;
-  scenario: string;
-  configuration_version: string;
-  start_time: string;
-  end_time: string;
-  duration_min: number;
-  start_battery_pct: number;
-  end_battery_pct: number;
+  scenario: string | null;
+  configuration_version: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  duration_min: number | null;
+  start_battery_pct: number | null;
+  end_battery_pct: number | null;
   mission_status: string;
 }
 export interface Action {
   action_id: string;
   mission_id: string;
-  sequence: number;
-  timestamp: string;
-  location_id: string;
-  asset_id: string;
+  sequence: number | null;
+  timestamp: string | null;
+  location_id: string | null;
+  asset_id: string | null;
   action_type: string;
-  battery_pct: number;
+  battery_pct: number | null;
   status: string;
   failure_type: string;
-  duration_sec: number;
-  scenario: string;
+  duration_sec: number | null;
+  scenario: string | null;
 }
 export interface Finding {
   anomaly_id: string;
   action_id: string;
   mission_id: string;
-  location_id: string;
-  asset_id: string;
-  timestamp: string;
+  location_id: string | null;
+  asset_id: string | null;
+  timestamp: string | null;
   anomaly_type: string;
   severity: string;
   operator_review_required: boolean;

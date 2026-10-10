@@ -1,14 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Pause, Play, RotateCcw } from "lucide-react";
-import { dataset, humanize, shortTime, type Configuration, type ReplayEvent } from "@sentinel/core";
+import { humanize, shortTime, type Configuration, type ReplayEvent } from "@sentinel/core";
 import { Button, ConfigurationControl, PageHeading, Panel, Tag } from "../components/ui";
+import { useInspectionData } from "../lib/inspection-data";
 export function Replay() {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
-  const missionIds = new Set(dataset.missions
+  const data = useInspectionData();
+  const missionIds = new Set(data.missions
     .filter((m) => configuration === "ALL" || m.scenario === configuration)
     .map((m) => m.mission_id));
-  const events = dataset.events.filter((event) => missionIds.has(event.mission_id));
+  const events = data.events.filter((event) => missionIds.has(event.mission_id));
   return <>
     <PageHeading title="Replay" />
     <div className="toolbar">
