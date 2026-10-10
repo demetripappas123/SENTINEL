@@ -317,7 +317,9 @@ export function createApiClient(
         assets: parts.flatMap((part) => part.assets),
         locations: parts.flatMap((part) => part.locations),
         readings: parts.flatMap((part) => part.readings),
-        events: parts.flatMap((part) => part.events),
+        events: parts
+          .flatMap((part) => part.events)
+          .sort((a, b) => a.timestamp.localeCompare(b.timestamp)),
       };
     },
     async getMetrics(): Promise<OperationalMetrics> {
