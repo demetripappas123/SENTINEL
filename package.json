@@ -1,0 +1,35 @@
+{
+  "name": "sentinel",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "SENTINEL-web-frontend",
+    "SENTINEL-mobile-frontend"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev:web": "npm run dev -w @sentinel/web",
+    "dev:mobile": "npm run start -w @sentinel/mobile",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint -w @sentinel/web",
+    "build:web": "npm run build -w @sentinel/web",
+    "build:mobile": "npm run export -w @sentinel/mobile",
+    "data:import": "python3 scripts/import-challenge.py",
+    "check": "npm test && npm run typecheck && npm run lint && npm run check:deps -w @sentinel/mobile && npm run build:web && npm run build:mobile"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "next": "16.4.0",
+    "prettier": "3.6.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "typescript": "~5.9.3",
+    "vitest": "5.0.3"
+  }
+}

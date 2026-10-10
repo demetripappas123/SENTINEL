@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.expo/
+dist/
+package-lock.json
+packages/core/src/data/challenge.json
+design/
+SPOT_KnightHacks_Challenge_Kit*

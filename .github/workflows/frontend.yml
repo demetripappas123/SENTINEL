@@ -1,0 +1,24 @@
+name: Frontend checks
+on:
+  push:
+    branches: [design, main, master]
+  pull_request:
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run check:deps -w @sentinel/mobile
+      - run: npm run build:web
+      - run: npm run build:mobile
+        env:
+          CI: "1"
