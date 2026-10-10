@@ -31,7 +31,7 @@ def connect() -> psycopg.Connection:
     credential = client.database.generate_database_credential(instance_names=[instance.name])
     if not credential.token:
         raise RuntimeError("Lakebase did not return a database credential")
-    return psycopg.connect(
+    conn = psycopg.connect(
         host=host,
         dbname=database,
         user=user,
@@ -41,3 +41,6 @@ def connect() -> psycopg.Connection:
         connect_timeout=30,
         row_factory=dict_row,
     )
+    # Kit timestamps carry no offset; store and read them as UTC.
+    conn.execute("SET TIME ZONE 'UTC'")
+    return conn

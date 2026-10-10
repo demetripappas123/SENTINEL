@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import challenge from "./data/challenge.json";
 import { getFindings, getMetrics } from "./index";
-import { createFixtureRepository } from "./repository";
+import { createApiRepository, createFixtureRepository } from "./repository";
 
 describe("fixture repository", () => {
   it("provides the complete dataset for operational metrics and joins", async () => {
@@ -30,5 +31,22 @@ describe("fixture repository", () => {
     expect(fresh.findings[0].severity).not.toBe("CHANGED");
     expect(fresh.events[0].details.status).not.toBe("CHANGED");
     expect((await createFixtureRepository().load()).missions).toHaveLength(27);
+  });
+});
+
+describe("API repository", () => {
+  it("loads the kit dataset from the API under its own review namespace", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(challenge)));
+    const repository = createApiRepository("http://localhost:8000", {
+      fetcher,
+    });
+    expect(repository.namespace).toBe("api-kit-v1");
+    expect((await repository.load()).missions).toHaveLength(27);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://localhost:8000/dataset?source=kit",
+      expect.anything(),
+    );
   });
 });

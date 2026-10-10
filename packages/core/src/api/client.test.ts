@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import challenge from "../data/challenge.json";
 import { createApiClient } from "./client";
 
 const item = {
@@ -10,6 +11,7 @@ const item = {
   action_id: "A0146",
   asset_id: null,
   location_id: "WP05",
+  rank: 140,
   evidence: { battery_pct: 47 },
 };
 const response = (body: unknown, status = 200) =>
@@ -52,6 +54,8 @@ describe("initial FastAPI client", () => {
     [{ ...item, verdict: { value: "inspection_failure" } }],
     [{ ...item, mission_id: 17 }],
     [{ ...item, evidence: [] }],
+    [{ ...item, rank: undefined }],
+    [{ ...item, rank: "140" }],
   ])("rejects a malformed queue response %#", async (body) => {
     await expect(
       createApiClient("http://localhost:8000", response(body)).getQueue(),
@@ -64,5 +68,79 @@ describe("initial FastAPI client", () => {
         response({ status: "offline" }),
       ).getHealth(),
     ).rejects.toThrow("Invalid health response");
+  });
+
+  it("uses the global fetch current at request time, not at creation", async () => {
+    const original = globalThis.fetch;
+    const client = createApiClient("http://localhost:8000");
+    const replaced = response({ status: "ok" });
+    globalThis.fetch = replaced;
+    try {
+      await client.getHealth();
+      expect(replaced).toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  describe("dataset", () => {
+    const dataset = { ...challenge, events: [] };
+
+    it("reads the kit dataset from a base URL with a trailing slash", async () => {
+      const fetcher = response(dataset);
+      expect(
+        await createApiClient("http://localhost:8000/", fetcher).getDataset(),
+      ).toEqual(dataset);
+      expect(fetcher).toHaveBeenCalledWith(
+        "http://localhost:8000/dataset?source=kit",
+        expect.objectContaining({ headers: { Accept: "application/json" } }),
+      );
+    });
+    it("exposes server errors rather than an empty dataset", async () => {
+      await expect(
+        createApiClient(
+          "http://localhost:8000",
+          response({}, 503),
+        ).getDataset(),
+      ).rejects.toThrow("503");
+    });
+    it.each([
+      ["a missing collection", { ...dataset, readings: undefined }],
+      ["a collection that is not a list", { ...dataset, missions: {} }],
+      [
+        "a mission with a missing field",
+        {
+          ...dataset,
+          missions: [{ ...challenge.missions[0], mission_name: undefined }],
+        },
+      ],
+      [
+        "an action with a mistyped field",
+        { ...dataset, actions: [{ ...challenge.actions[0], sequence: "1" }] },
+      ],
+      [
+        "a finding with a string flag",
+        {
+          ...dataset,
+          findings: [
+            { ...challenge.findings[0], operator_review_required: "true" },
+          ],
+        },
+      ],
+      [
+        "an event with nested details",
+        {
+          ...dataset,
+          events: [
+            { ...challenge.events[0], details: { battery: { pct: 1 } } },
+          ],
+        },
+      ],
+      ["a null record", { ...dataset, assets: [null] }],
+    ])("rejects %s", async (_, body) => {
+      await expect(
+        createApiClient("http://localhost:8000", response(body)).getDataset(),
+      ).rejects.toThrow("Invalid dataset response");
+    });
   });
 });
