@@ -1,0 +1,41 @@
+anomaly_id,action_id,mission_id,location_id,asset_id,timestamp,anomaly_type,severity,operator_review_required,description,synthetic
+AN001,A0141,M015,WP05,PANEL-203,2026-09-06T10:03:24,SIGNAL_DEGRADATION,LOW,False,Synthetic signal degradation detected.,True
+AN002,A0133,M014,WP06,HX-217,2026-09-06T02:07:48,GAUGE_OUT_OF_RANGE,HIGH,True,Synthetic gauge out of range detected.,True
+AN003,A0160,M016,WP09,PANEL-212,2026-09-06T18:26:00,VISUAL_DEFECT,HIGH,True,Synthetic visual defect detected.,True
+AN004,A0085,M009,WP11,HX-210,2026-09-04T10:12:30,VISUAL_DEFECT,HIGH,True,Synthetic visual defect detected.,True
+AN005,A0265,M027,WP02,HX-202,2026-09-10T10:12:30,ABNORMAL_VIBRATION,HIGH,True,Synthetic abnormal vibration detected.,True
+AN006,A0057,M006,WP03,HX-208,2026-09-03T10:21:42,VISUAL_DEFECT,MEDIUM,False,Synthetic visual defect detected.,True
+AN007,A0247,M025,WP11,HX-210,2026-09-09T18:12:36,ABNORMAL_VIBRATION,HIGH,True,Synthetic abnormal vibration detected.,True
+AN008,A0028,M003,WP15,HX-201,2026-09-02T10:22:24,ABNORMAL_TEMPERATURE,MEDIUM,False,Synthetic abnormal temperature detected.,True
+AN009,A0009,M001,WP03,HX-208,2026-09-01T18:27:54,VISUAL_DEFECT,HIGH,True,Synthetic visual defect detected.,True
+AN010,A0121,M013,WP05,HX-201,2026-09-05T18:03:12,SIGNAL_DEGRADATION,LOW,False,Synthetic signal degradation detected.,True
+AN011,A0251,M026,WP08,PANEL-212,2026-09-10T02:02:18,VISUAL_DEFECT,MEDIUM,False,Synthetic visual defect detected.,True
+AN012,A0118,M012,WP15,PANEL-218,2026-09-05T10:21:36,ABNORMAL_TEMPERATURE,MEDIUM,False,Synthetic abnormal temperature detected.,True
+AN013,A0055,M006,WP01,PANEL-215,2026-09-03T10:15:30,ABNORMAL_VIBRATION,MEDIUM,False,Synthetic abnormal vibration detected.,True
+AN014,A0194,M020,WP07,HX-204,2026-09-08T02:08:00,ABNORMAL_TEMPERATURE,CRITICAL,True,Synthetic abnormal temperature detected.,True
+AN015,A0266,M027,WP13,HX-219,2026-09-10T10:15:00,SIGNAL_DEGRADATION,MEDIUM,False,Synthetic signal degradation detected.,True
+AN016,A0168,M017,WP03,HX-208,2026-09-07T02:24:48,GAUGE_OUT_OF_RANGE,LOW,False,Synthetic gauge out of range detected.,True
+AN017,A0200,M020,WP10,PUMP-205,2026-09-08T02:20:00,ABNORMAL_VIBRATION,MEDIUM,False,Synthetic abnormal vibration detected.,True
+AN018,A0076,M008,WP01,PANEL-215,2026-09-04T02:15:36,ABNORMAL_VIBRATION,MEDIUM,False,Synthetic abnormal vibration detected.,True
+AN019,A0029,M003,WP05,HX-204,2026-09-02T10:25:12,ABNORMAL_TEMPERATURE,LOW,False,Synthetic abnormal temperature detected.,True
+AN020,A0061,M007,WP05,PANEL-203,2026-09-03T18:02:42,SIGNAL_DEGRADATION,CRITICAL,True,Synthetic signal degradation detected.,True
+AN021,A0119,M012,WP08,PANEL-215,2026-09-05T10:24:18,ABNORMAL_TEMPERATURE,MEDIUM,False,Synthetic abnormal temperature detected.,True
+AN022,A0038,M004,WP09,PANEL-211,2026-09-02T18:24:00,GAUGE_OUT_OF_RANGE,MEDIUM,False,Synthetic gauge out of range detected.,True
+AN023,A0191,M020,WP05,HX-204,2026-09-08T02:02:00,NAVIGATION_OBSTRUCTION,MEDIUM,False,Synthetic navigation obstruction detected.,True
+AN024,A0001,M001,WP05,HX-201,2026-09-01T18:03:06,NAVIGATION_OBSTRUCTION,LOW,False,Synthetic navigation obstruction detected.,True
+AN025,A0037,M004,WP06,HX-217,2026-09-02T18:21:00,LOCALIZATION_ISSUE,HIGH,True,Synthetic localization issue detected.,True
+AN026,A0248,M025,WP02,PANEL-212,2026-09-09T18:14:24,SIGNAL_DEGRADATION,LOW,False,Synthetic signal degradation detected.,True
+AN027,A0249,M025,WP07,HX-208,2026-09-09T18:16:12,GAUGE_OUT_OF_RANGE,LOW,False,Synthetic gauge out of range detected.,True
+AN028,A0233,M024,WP10,PUMP-205,2026-09-09T10:05:42,ABNORMAL_VIBRATION,HIGH,True,Synthetic abnormal vibration detected.,True
+AN029,A0031,M004,WP05,HX-204,2026-09-02T18:03:00,NAVIGATION_OBSTRUCTION,LOW,False,Synthetic navigation obstruction detected.,True
+AN030,A0169,M017,WP09,PANEL-212,2026-09-07T02:27:54,NAVIGATION_OBSTRUCTION,CRITICAL,True,Synthetic navigation obstruction detected.,True
+AN031,A0146,M015,WP04,COMP-214,2026-09-06T10:20:24,ABNORMAL_VIBRATION,LOW,False,Synthetic abnormal vibration detected.,True
+AN032,A0120,M012,WP02,GAUGE-209,2026-09-05T10:27:00,ABNORMAL_TEMPERATURE,LOW,False,Synthetic abnormal temperature detected.,True
+AN033,A0234,M024,WP01,PANEL-215,2026-09-09T10:07:36,LOCALIZATION_ISSUE,MEDIUM,False,Synthetic localization issue detected.,True
+AN034,A0016,M002,WP09,PANEL-211,2026-09-02T02:18:36,ABNORMAL_VIBRATION,MEDIUM,False,Synthetic abnormal vibration detected.,True
+AN035,A0132,M014,WP09,PANEL-212,2026-09-06T02:05:12,GAUGE_OUT_OF_RANGE,HIGH,True,Synthetic gauge out of range detected.,True
+AN036,A0213,M022,WP12,PANEL-218,2026-09-08T18:07:12,SIGNAL_DEGRADATION,HIGH,True,Synthetic signal degradation detected.,True
+AN037,A0147,M015,WP07,HX-213,2026-09-06T10:23:48,ABNORMAL_VIBRATION,HIGH,True,Synthetic abnormal vibration detected.,True
+AN038,A0060,M006,WP09,PANEL-211,2026-09-03T10:31:00,GAUGE_OUT_OF_RANGE,CRITICAL,True,Synthetic gauge out of range detected.,True
+AN039,A0070,M007,WP05,PANEL-203,2026-09-03T18:27:00,ABNORMAL_VIBRATION,LOW,False,Synthetic abnormal vibration detected.,True
+AN040,A0142,M015,WP11,HX-210,2026-09-06T10:06:48,VISUAL_DEFECT,MEDIUM,False,Synthetic visual defect detected.,True

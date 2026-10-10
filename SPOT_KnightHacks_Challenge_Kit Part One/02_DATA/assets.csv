@@ -1,0 +1,21 @@
+asset_id,asset_name,asset_type,location_id,criticality,synthetic
+HX-201,Heat Exchanger 01,Heat Exchanger,WP05,LOW,True
+HX-202,Heat Exchanger 02,Heat Exchanger,WP05,CRITICAL,True
+PANEL-203,Electrical Panel 03,Electrical Panel,WP05,MEDIUM,True
+HX-204,Heat Exchanger 04,Heat Exchanger,WP05,MEDIUM,True
+PUMP-205,Pump 05,Pump,WP10,MEDIUM,True
+MOTOR-206,Motor 06,Motor,WP14,LOW,True
+VALVE-207,Valve 07,Valve,WP12,HIGH,True
+HX-208,Heat Exchanger 08,Heat Exchanger,WP03,MEDIUM,True
+GAUGE-209,Pressure Gauge 09,Pressure Gauge,WP14,HIGH,True
+HX-210,Heat Exchanger 10,Heat Exchanger,WP11,MEDIUM,True
+PANEL-211,Electrical Panel 11,Electrical Panel,WP09,MEDIUM,True
+PANEL-212,Electrical Panel 12,Electrical Panel,WP09,HIGH,True
+HX-213,Heat Exchanger 13,Heat Exchanger,WP13,HIGH,True
+COMP-214,Compressor 14,Compressor,WP04,MEDIUM,True
+PANEL-215,Electrical Panel 15,Electrical Panel,WP01,LOW,True
+HX-216,Heat Exchanger 16,Heat Exchanger,WP13,MEDIUM,True
+HX-217,Heat Exchanger 17,Heat Exchanger,WP06,CRITICAL,True
+PANEL-218,Electrical Panel 18,Electrical Panel,WP12,MEDIUM,True
+HX-219,Heat Exchanger 19,Heat Exchanger,WP13,MEDIUM,True
+PUMP-220,Pump 20,Pump,WP14,MEDIUM,True

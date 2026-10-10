@@ -1,0 +1,16 @@
+location_id,location_name,zone_type,floor,x_coord,y_coord,environment,synthetic
+WP01,Main Entrance,ACCESS,1,15.7,50.2,NORMAL,True
+WP02,Electrical Room,ELECTRICAL,1,63.2,90.8,INDOOR_DUSTY,True
+WP03,Cooling Loop,PROCESS,1,85.5,60.9,LOW_LIGHT,True
+WP04,Pump Bay,MECHANICAL,1,75.5,54.3,LOW_LIGHT,True
+WP05,Pipe Gallery,PROCESS,1,72.6,57.8,HIGH_NOISE,True
+WP06,Compressor Area,MECHANICAL,1,5.2,12.3,HIGH_NOISE,True
+WP07,Control Room Corridor,ACCESS,1,78.5,45.5,LOW_LIGHT,True
+WP08,Turbine Hall North,MECHANICAL,1,66.1,23.9,HIGH_NOISE,True
+WP09,Turbine Hall South,MECHANICAL,1,36.3,94.9,HIGH_NOISE,True
+WP10,Valve Station,PROCESS,1,77.5,95.0,NORMAL,True
+WP11,Battery Room,ELECTRICAL,2,62.4,70.1,INDOOR_DRY,True
+WP12,Heat Exchanger Area,PROCESS,2,55.2,31.3,LOW_LIGHT,True
+WP13,Warehouse Corridor,ACCESS,2,17.7,63.0,NORMAL,True
+WP14,Auxiliary Systems Bay,MECHANICAL,2,32.8,81.3,HIGH_NOISE,True
+WP15,Inspection Dock,ACCESS,2,37.7,43.0,LOW_LIGHT,True

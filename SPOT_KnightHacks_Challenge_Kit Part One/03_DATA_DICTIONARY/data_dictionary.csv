@@ -1,0 +1,63 @@
+dataset,field_name,description
+missions.csv,mission_id,Unique synthetic mission identifier.
+missions.csv,mission_name,Human-readable synthetic mission name.
+missions.csv,scenario,Synthetic comparison scenario: BASELINE or IMPROVED.
+missions.csv,configuration_version,Synthetic configuration identifier: V1 or V2.
+missions.csv,start_time,Mission start timestamp.
+missions.csv,end_time,Mission end timestamp.
+missions.csv,duration_min,Mission duration in minutes.
+missions.csv,start_battery_pct,Battery percentage at mission start.
+missions.csv,end_battery_pct,Battery percentage at mission end.
+missions.csv,mission_status,Overall mission status.
+missions.csv,operator_mode,Operating mode associated with the mission.
+missions.csv,synthetic,Indicates the record is fictional challenge data.
+actions.csv,action_id,Unique synthetic action identifier.
+actions.csv,mission_id,Mission containing the action.
+actions.csv,sequence,Action order within the mission.
+actions.csv,timestamp,Synthetic timestamp for the action.
+actions.csv,location_id,Location associated with the action.
+actions.csv,asset_id,Asset associated with the action.
+actions.csv,action_type,Type of action or inspection.
+actions.csv,battery_pct,Estimated battery state when action occurred.
+actions.csv,status,Action outcome: SUCCESS or FAILED.
+actions.csv,failure_type,Failure category when action status is FAILED.
+actions.csv,duration_sec,Synthetic action duration in seconds.
+actions.csv,scenario,Synthetic comparison scenario.
+actions.csv,configuration_version,Synthetic configuration identifier.
+actions.csv,synthetic,Indicates the record is fictional challenge data.
+readings.csv,reading_id,Unique synthetic reading identifier.
+readings.csv,action_id,Action that generated the reading.
+readings.csv,mission_id,Mission associated with the reading.
+readings.csv,asset_id,Asset associated with the reading.
+readings.csv,location_id,Location associated with the reading.
+readings.csv,timestamp,Synthetic reading timestamp.
+readings.csv,measurement_type,Type of inspection or telemetry measurement.
+readings.csv,value,Synthetic measurement value.
+readings.csv,unit,Unit associated with the measurement.
+readings.csv,quality,Simplified quality indicator.
+readings.csv,synthetic,Indicates the record is fictional challenge data.
+anomalies.csv,anomaly_id,Unique synthetic anomaly identifier.
+anomalies.csv,action_id,Action associated with the anomaly.
+anomalies.csv,mission_id,Mission associated with the anomaly.
+anomalies.csv,location_id,Location where anomaly was associated.
+anomalies.csv,asset_id,Asset associated with the anomaly.
+anomalies.csv,timestamp,Synthetic anomaly timestamp.
+anomalies.csv,anomaly_type,Synthetic anomaly classification.
+anomalies.csv,severity,"LOW, MEDIUM, HIGH, or CRITICAL."
+anomalies.csv,operator_review_required,Indicates whether review is recommended.
+anomalies.csv,description,Synthetic description of the anomaly.
+anomalies.csv,synthetic,Indicates the record is fictional challenge data.
+locations.csv,location_id,Unique synthetic waypoint identifier.
+locations.csv,location_name,Fictional operating-area name.
+locations.csv,zone_type,General fictional area classification.
+locations.csv,floor,Synthetic floor number.
+locations.csv,x_coord,Synthetic X coordinate for visualization.
+locations.csv,y_coord,Synthetic Y coordinate for visualization.
+locations.csv,environment,Simplified synthetic operating environment.
+locations.csv,synthetic,Indicates the record is fictional challenge data.
+assets.csv,asset_id,Unique synthetic equipment identifier.
+assets.csv,asset_name,Human-readable fictional equipment name.
+assets.csv,asset_type,Synthetic equipment category.
+assets.csv,location_id,Location containing the asset.
+assets.csv,criticality,Simplified fictional asset criticality.
+assets.csv,synthetic,Indicates the record is fictional challenge data.
