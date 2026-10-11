@@ -9,6 +9,8 @@ import { InspectionDataProvider } from "./inspection-data";
 import { QueueProvider } from "./queue-data";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+// Route handlers read the session cookie, which only exists inside a request.
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 afterEach(() => vi.unstubAllGlobals());
 
 const orbit = {
@@ -77,7 +79,8 @@ it("renders backend records through the real Next routes, API client, and provid
     </InspectionDataProvider>,
   );
   const metrics = await screen.findByLabelText("Operational metrics");
-  expect(document.body).not.toHaveTextContent(/orbit|SENSOR_TIMEOUT|raw data/i);
+  // The sidebar links to the Orbit settings page; source names must not leak into content.
+  expect(screen.getByRole("main")).not.toHaveTextContent(/orbit|SENSOR_TIMEOUT|raw data/i);
   expect(metrics).toHaveTextContent("0 / 1 recorded outcomes passed");
   expect(screen.getByLabelText("Review breakdown")).toHaveTextContent(
     "1 inspection to retry",
