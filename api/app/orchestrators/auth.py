@@ -1,7 +1,21 @@
+"""POST /api/auth/login, /api/auth/join, /api/auth/logout, and GET /api/auth/session.
+
+Also POST /api/organizations, which creates an organization and its first user.
+"""
 import psycopg
 from fastapi import APIRouter, Depends, Header, HTTPException
 
-from app.auth.service import AuthSession, CreateOrganizationRequest, LoginRequest, create_organization, current_user, login, logout
+from app.auth.service import (
+    AuthSession,
+    CreateOrganizationRequest,
+    JoinOrganizationRequest,
+    LoginRequest,
+    create_organization,
+    current_user,
+    join_organization,
+    login,
+    logout,
+)
 from app.auth.store import AuthStore, get_auth_store
 from app.orbit.service import OrbitRequestError
 
@@ -27,6 +41,17 @@ def post_organization(body: CreateOrganizationRequest, store: AuthStore = Depend
     """Create an organization and its first user, then sign that user in."""
     try:
         return create_organization(store, body)
+    except OrbitRequestError as exc:
+        raise _auth_error(exc) from exc
+    except (psycopg.Error, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail="Database is unavailable") from exc
+
+
+@router.post("/api/auth/join", response_model=AuthSession)
+def post_join(body: JoinOrganizationRequest, store: AuthStore = Depends(get_auth_store)) -> AuthSession:
+    """Create a user on an existing organization and sign that user in."""
+    try:
+        return join_organization(store, body)
     except OrbitRequestError as exc:
         raise _auth_error(exc) from exc
     except (psycopg.Error, RuntimeError) as exc:

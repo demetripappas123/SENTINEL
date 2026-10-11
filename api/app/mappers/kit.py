@@ -1,9 +1,10 @@
+"""Read the kit CSVs into a canonical batch. One row becomes one record."""
 import csv
 import json
 from pathlib import Path
 
 from app.mappers.parse import flag, number, required_text, text, timestamp, whole_number
-from app.schemas.canonical import (
+from app.dtos.canonical import (
     Action,
     AnomalyClaim,
     Asset,

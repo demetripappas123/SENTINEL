@@ -1,8 +1,15 @@
+"""SQL for one organization.
+
+load_history gathers the window the rules need. persist upserts the canonical
+rows and the current queue, then appends one rule decision per scored action.
+Decisions are not updated when the same action is ingested again.
+"""
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from psycopg.types.json import Json
 
-from app.schemas.canonical import (
+from app.dtos.canonical import (
     Action,
     AnomalyClaim,
     Asset,
@@ -11,7 +18,7 @@ from app.schemas.canonical import (
     Mission,
     Reading,
 )
-from app.schemas.queue import QueueItem, QueueUpdate, Verdict
+from app.dtos.queue import QueueItem, QueueUpdate, RuleDecision, Verdict
 
 HISTORY_DAYS = 30
 
@@ -20,18 +27,21 @@ def load_history(conn, incoming: CanonicalBatch, organization_id: str) -> Canoni
     """Prior canonical rows the new batch is ranked against.
 
     Actions are limited to the assets in the batch and the 30 days before
-    its earliest timestamp. Good readings of the same measurements are
-    included so a new value can be compared with its peers.
+    its earliest timestamp. Good readings of those same assets are included
+    so a new value is compared with that asset's own baseline.
     """
     start = _window_start(incoming)
-    asset_ids = sorted({action.asset_id for action in incoming.actions if action.asset_id})
+    asset_ids = sorted(
+        {action.asset_id for action in incoming.actions if action.asset_id}
+        | {reading.asset_id for reading in incoming.readings if reading.asset_id}
+    )
     actions = _actions_for_assets(conn, organization_id, asset_ids, start)
     readings = _readings_for_actions(conn, organization_id, actions)
     measurements = sorted(
         {reading.measurement_type for reading in incoming.readings}
         | {reading.measurement_type for reading in readings}
     )
-    peers = _good_readings(conn, organization_id, measurements, start)
+    peers = _good_readings(conn, organization_id, asset_ids, measurements, start)
     extra_actions = _actions_for_keys(
         conn,
         organization_id,
@@ -69,6 +79,7 @@ def persist(conn, incoming: CanonicalBatch, update: QueueUpdate, organization_id
             (organization_id, source, action_id),
         )
     _write(conn, "queue_items", _QUEUE, [_queue_row(organization_id, row) for row in update.upsert])
+    _write_decisions(conn, organization_id, update.decisions)
 
 
 def load_queue(conn, organization_id: str) -> list[QueueItem]:
@@ -99,6 +110,7 @@ def load_queue(conn, organization_id: str) -> list[QueueItem]:
     ]
 
 
+# History queries. Same organization, same assets, and the 30 days before the batch.
 def _window_start(incoming: CanonicalBatch) -> datetime:
     stamps = [action.timestamp for action in incoming.actions if action.timestamp is not None]
     anchor = min(stamps) if stamps else datetime.now(timezone.utc)
@@ -155,18 +167,25 @@ def _for_actions(conn, organization_id: str, table: str, model, actions: list[Ac
     return found
 
 
-def _good_readings(conn, organization_id: str, measurements: list[str], start: datetime) -> list[Reading]:
-    if not measurements:
+def _good_readings(
+    conn,
+    organization_id: str,
+    asset_ids: list[str],
+    measurements: list[str],
+    start: datetime,
+) -> list[Reading]:
+    if not asset_ids or not measurements:
         return []
     rows = conn.execute(
         """
         SELECT * FROM sentinel.readings
         WHERE organization_id = %s
+          AND asset_id = ANY(%s)
           AND measurement_type = ANY(%s)
           AND quality = 'GOOD'
           AND (timestamp IS NULL OR timestamp >= %s)
         """,
-        (organization_id, measurements, start),
+        (organization_id, asset_ids, measurements, start),
     ).fetchall()
     return [Reading.model_validate(row) for row in rows]
 
@@ -212,9 +231,42 @@ def _dedupe(rows: list, key) -> list:
     return list({key(row): row for row in rows}.values())
 
 
+# Writes. Canonical rows and the current queue are upserted. Rule decisions are appended.
 def _write(conn, table: str, statement: str, rows: list[tuple]) -> None:
     if rows:
         conn.cursor().executemany(statement, rows)
+
+
+def _write_decisions(conn, organization_id: str, decisions: list[RuleDecision]) -> None:
+    decision_rows: list[tuple] = []
+    firing_rows: list[tuple] = []
+    for decision in decisions:
+        decision_id = "dec_" + secrets.token_hex(8)
+        decision_rows.append(
+            (
+                decision_id,
+                organization_id,
+                decision.source,
+                decision.action_id,
+                decision.rule_set_version,
+                decision.queued,
+                None if decision.verdict is None else decision.verdict.value,
+                decision.rank,
+            )
+        )
+        firing_rows.extend(
+            (
+                decision_id,
+                firing.rule_id,
+                firing.matched,
+                firing.observed_value,
+                firing.threshold,
+                firing.rank_delta,
+            )
+            for firing in decision.firings
+        )
+    _write(conn, "rule_decisions", _DECISION, decision_rows)
+    _write(conn, "rule_firings", _FIRING, firing_rows)
 
 
 def _location_row(organization_id: str, row: Location) -> tuple:
@@ -387,4 +439,16 @@ ON CONFLICT (source, action_id) DO UPDATE SET
     rank = EXCLUDED.rank,
     evidence = EXCLUDED.evidence,
     updated_at = now()
+"""
+
+_DECISION = """
+INSERT INTO sentinel.rule_decisions (
+    id, organization_id, source, action_id, rule_set_version, queued, verdict, rank
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+"""
+
+_FIRING = """
+INSERT INTO sentinel.rule_firings (
+    decision_id, rule_id, matched, observed_value, threshold, rank_delta
+) VALUES (%s, %s, %s, %s, %s, %s)
 """

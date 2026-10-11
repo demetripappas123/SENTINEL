@@ -1,3 +1,9 @@
+"""The stand-in for Orbit's subscription API.
+
+MockOrbitProvider stores the subscription in the catalog and keeps the signing
+secret in this process. RealOrbitProvider refuses the call because no Orbit
+instance is connected.
+"""
 import hashlib
 import hmac
 import secrets

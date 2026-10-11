@@ -1,5 +1,11 @@
+"""Read an Orbit run payload into a canonical batch.
+
+The payload is the fixture shape used by the webhook: a run, its events, and
+optional readings. Fields that a real Orbit instance might name differently
+are accepted when the fixture already uses them.
+"""
 from app.mappers.parse import first, flag, number, text, timestamp
-from app.schemas.canonical import (
+from app.dtos.canonical import (
     Action,
     AnomalyClaim,
     CanonicalBatch,

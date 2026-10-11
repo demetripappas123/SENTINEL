@@ -18,7 +18,7 @@ export function LoginScreen({
   colors: Theme;
   onSignedIn: (session: MobileSession) => void;
 }) {
-  const [mode, setMode] = useState<"sign-in" | "create">("sign-in");
+  const [mode, setMode] = useState<"sign-in" | "create" | "join">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -30,7 +30,8 @@ export function LoginScreen({
     setPending(true);
     setError("");
     try {
-      const response = await fetch(apiUrl + (mode === "sign-in" ? "/api/auth/login" : "/api/organizations"), {
+      const path = mode === "sign-in" ? "/api/auth/login" : mode === "join" ? "/api/auth/join" : "/api/organizations";
+      const response = await fetch(apiUrl + path, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(
@@ -58,17 +59,19 @@ export function LoginScreen({
     <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: colors.background }}>
       <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>SENTINEL</Text>
       <Text accessibilityRole="header" style={{ color: colors.foreground, fontSize: 28, fontWeight: "600", marginTop: 8 }}>
-        {mode === "sign-in" ? "Sign in" : "Create organization"}
+        {mode === "sign-in" ? "Sign in" : mode === "join" ? "Join organization" : "Create organization"}
       </Text>
       <Text style={{ color: colors.mutedForeground, marginTop: 8, marginBottom: 16 }}>
-        The signed-in user belongs to one organization. That organization owns the Orbit webhook.
+        {mode === "join"
+          ? "Create an account on an organization that already exists."
+          : "The signed-in user belongs to one organization. That organization owns the Orbit webhook."}
       </Text>
-      {mode === "create" ? (
+      {mode === "sign-in" ? null : (
         <>
           <Field label="Organization" value={organizationName} onChange={setOrganizationName} colors={colors} />
           <Field label="Your name" value={name} onChange={setName} colors={colors} />
         </>
-      ) : null}
+      )}
       <Field label="Email" value={email} onChange={setEmail} colors={colors} />
       <Field label="Password" value={password} onChange={setPassword} colors={colors} secure />
       {error ? (
@@ -77,7 +80,7 @@ export function LoginScreen({
         </Text>
       ) : null}
       <Button
-        label={pending ? "Please wait…" : mode === "sign-in" ? "Sign in" : "Create and sign in"}
+        label={pending ? "Please wait…" : mode === "sign-in" ? "Sign in" : mode === "join" ? "Join and sign in" : "Create and sign in"}
         variant="default"
         colors={colors}
         disabled={pending}
@@ -85,15 +88,38 @@ export function LoginScreen({
           void submit();
         }}
       />
-      <Button
-        label={mode === "sign-in" ? "Create an organization" : "Have an account? Sign in"}
-        colors={colors}
-        onPress={() => {
-          setMode(mode === "sign-in" ? "create" : "sign-in");
-          setError("");
-        }}
-        style={{ marginTop: 8 }}
-      />
+      {mode === "sign-in" ? (
+        <>
+          <Button
+            label="Join an organization"
+            colors={colors}
+            onPress={() => {
+              setMode("join");
+              setError("");
+            }}
+            style={{ marginTop: 8 }}
+          />
+          <Button
+            label="Create an organization"
+            colors={colors}
+            onPress={() => {
+              setMode("create");
+              setError("");
+            }}
+            style={{ marginTop: 8 }}
+          />
+        </>
+      ) : (
+        <Button
+          label="Have an account? Sign in"
+          colors={colors}
+          onPress={() => {
+            setMode("sign-in");
+            setError("");
+          }}
+          style={{ marginTop: 8 }}
+        />
+      )}
     </View>
   );
 }

@@ -1,3 +1,9 @@
+"""Lakebase connection.
+
+Opens one Postgres session with the Databricks workspace credential and sets
+the session time zone to UTC. Callers pass the organization into each query.
+Row security is not turned on here.
+"""
 import os
 from pathlib import Path
 

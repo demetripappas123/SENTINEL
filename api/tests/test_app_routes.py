@@ -2,7 +2,7 @@ import psycopg
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.routers import metrics as metrics_router
+from app.orchestrators import metrics as metrics_router
 
 client = TestClient(app)
 

@@ -1,9 +1,10 @@
+"""GET /queue for the signed-in organization. Reads the stored queue. Does not rescore it."""
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.deps import require_user
 from app.auth.store import UserAccount
-from app.schemas.queue import QueueItem
+from app.dtos.queue import QueueItem
 from app.services.queue import get_queue
 
 router = APIRouter(tags=["queue"])

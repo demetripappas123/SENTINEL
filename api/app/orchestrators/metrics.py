@@ -1,9 +1,10 @@
+"""GET /metrics for the signed-in organization."""
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.deps import require_user
 from app.auth.store import UserAccount
-from app.schemas.metrics import OperationalMetrics
+from app.dtos.metrics import OperationalMetrics
 from app.services.metrics import get_metrics
 
 router = APIRouter(tags=["metrics"])

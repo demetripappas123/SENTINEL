@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 from app.mappers.kit import map_kit
-from app.schemas.canonical import Action, CanonicalBatch, Mission, Source
+from app.dtos.canonical import Action, CanonicalBatch, Mission, Source
 from app.services.dataset import replay_events, to_dataset
 
 DATA = Path(__file__).resolve().parents[2] / "SPOT_KnightHacks_Challenge_Kit Part One" / "02_DATA"

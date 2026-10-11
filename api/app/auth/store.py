@@ -1,3 +1,8 @@
+"""Users, sessions, and organizations.
+
+MemoryAuthStore is the default and forgets writes when the process stops.
+PostgresAuthStore is used when ORBIT_CATALOG is postgres.
+"""
 import os
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
@@ -26,7 +31,15 @@ class AuthStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def organization_by_name(self, name: str) -> tuple[str, str] | None:
+        raise NotImplementedError
+
+    @abstractmethod
     def create_organization_user(self, user: UserAccount) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_user(self, user: UserAccount) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -54,9 +67,30 @@ class MemoryAuthStore(AuthStore):
         user = next((item for item in self.users.values() if item.organization_id == organization_id), None)
         return user.organization_name if user else None
 
+    def organization_by_name(self, name: str) -> tuple[str, str] | None:
+        folded = name.casefold()
+        found = {
+            user.organization_id: user.organization_name
+            for user in self.users.values()
+            if user.organization_name.casefold() == folded
+        }
+        if len(found) > 1:
+            raise ValueError("ambiguous")
+        if not found:
+            return None
+        organization_id, organization_name = next(iter(found.items()))
+        return organization_id, organization_name
+
     def create_organization_user(self, user: UserAccount) -> None:
         if self.user_by_email(user.email) is not None:
             raise ValueError("email")
+        self.users[user.id] = user
+
+    def create_user(self, user: UserAccount) -> None:
+        if self.user_by_email(user.email) is not None:
+            raise ValueError("email")
+        if self.organization_name(user.organization_id) is None:
+            raise ValueError("organization")
         self.users[user.id] = user
 
     def save_session(self, token_hash: str, user_id: str, expires_at: datetime) -> None:
@@ -96,6 +130,18 @@ class PostgresAuthStore(AuthStore):
             row = conn.execute("SELECT name FROM sentinel.organizations WHERE id = %s", (organization_id,)).fetchone()
         return row["name"] if row else None
 
+    def organization_by_name(self, name: str) -> tuple[str, str] | None:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT id, name FROM sentinel.organizations WHERE lower(name) = lower(%s)",
+                (name,),
+            ).fetchall()
+        if len(rows) > 1:
+            raise ValueError("ambiguous")
+        if not rows:
+            return None
+        return rows[0]["id"], rows[0]["name"]
+
     def create_organization_user(self, user: UserAccount) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -110,6 +156,24 @@ class PostgresAuthStore(AuthStore):
                 (user.id, user.organization_id, user.email, user.name, user.password_hash),
             )
             conn.commit()
+
+    def create_user(self, user: UserAccount) -> None:
+        from psycopg.errors import ForeignKeyViolation, UniqueViolation
+
+        try:
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO sentinel.users (id, organization_id, email, name, password_hash)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (user.id, user.organization_id, user.email, user.name, user.password_hash),
+                )
+                conn.commit()
+        except UniqueViolation as exc:
+            raise ValueError("email") from exc
+        except ForeignKeyViolation as exc:
+            raise ValueError("organization") from exc
 
     def save_session(self, token_hash: str, user_id: str, expires_at: datetime) -> None:
         with self._connect() as conn:

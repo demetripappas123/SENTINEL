@@ -1,3 +1,8 @@
+"""Orbit connection routes and the public webhook receiver.
+
+The webhook is public because Orbit calls it. Every other route here requires
+a signed-in user and uses that user's organization.
+"""
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 import psycopg

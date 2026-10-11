@@ -1,3 +1,8 @@
+"""Store of Orbit integrations, webhook subscriptions, and deliveries.
+
+MemoryCatalog is the default. PostgresCatalog is used when ORBIT_CATALOG is postgres.
+An organization has one integration, and that integration has one subscription.
+"""
 import os
 from abc import ABC, abstractmethod
 

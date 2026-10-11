@@ -1,3 +1,8 @@
+"""Connect an organization to one webhook and accept a signed delivery.
+
+A second connection for the same organization is rejected. A delivery is stored,
+then the payload is ingested as that organization's data.
+"""
 import secrets
 
 from app.orbit.catalog import OrbitCatalog
@@ -11,7 +16,7 @@ from app.orbit.models import (
     Organization,
 )
 from app.orbit.provider import MockOrbitProvider, secret_matches
-from app.schemas.canonical import Action, CanonicalBatch, Mission, Source
+from app.dtos.canonical import Action, CanonicalBatch, Mission, Source
 
 
 class OrbitRequestError(Exception):

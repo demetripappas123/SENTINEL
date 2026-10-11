@@ -1,3 +1,4 @@
+"""Records that match the sentinel tables: locations, assets, missions, actions, readings, claims."""
 from datetime import datetime
 from enum import Enum
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from app.mappers.kit import map_kit
-from app.schemas.canonical import Action, CanonicalBatch, Mission, Source
+from app.dtos.canonical import Action, CanonicalBatch, Mission, Source
 from app.services.dataset import format_timestamp, to_dataset
 
 ROOT = Path(__file__).resolve().parents[2]

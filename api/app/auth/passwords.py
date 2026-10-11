@@ -1,3 +1,4 @@
+"""Hash and check operator passwords. The stored hash is pbkdf2-sha256."""
 import hashlib
 import hmac
 import os

@@ -3,9 +3,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.routers import dataset as dataset_router
-from app.schemas.canonical import Source
-from app.schemas.dataset import AssetOut, InspectionDataset
+from app.orchestrators import dataset as dataset_router
+from app.dtos.canonical import Source
+from app.dtos.dataset import AssetOut, InspectionDataset
 
 client = TestClient(app)
 

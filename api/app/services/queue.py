@@ -1,7 +1,12 @@
+"""Decide which stored actions must be scored again when a batch arrives.
+
+The affected set is the incoming actions plus other actions on those same
+assets. get_queue only reads the rows already stored.
+"""
 from app.db import connect
-from app.rules.evidence import build_queue
-from app.schemas.canonical import CanonicalBatch
-from app.schemas.queue import QueueItem, QueueUpdate
+from app.services.rules.evidence import score_batch
+from app.dtos.canonical import CanonicalBatch
+from app.dtos.queue import QueueItem, QueueUpdate
 from app.services.store import load_queue
 
 
@@ -14,16 +19,20 @@ def queue_updates(existing: CanonicalBatch, incoming: CanonicalBatch) -> QueueUp
     """Queue rows to write after new records arrive.
 
     Rules score the merged history. The rows written are the incoming
-    actions, every other action on those assets, and actions that share a
-    measurement, because a new failure or a new good reading can change
-    their rank or verdict.
+    actions and every other action on those assets, because a new failure
+    or a new good reading can change their rank or verdict.
     """
     merged = _merge(existing, incoming)
-    queued = {item.id: item for item in build_queue(merged)}
+    scored = {
+        f"{decision.source}:{decision.action_id}": (item, decision)
+        for item, decision in score_batch(merged)
+    }
     affected = _affected_ids(merged, incoming)
+    ordered = sorted(affected)
     return QueueUpdate(
-        upsert=[queued[item_id] for item_id in sorted(affected) if item_id in queued],
-        remove_ids=sorted(item_id for item_id in affected if item_id not in queued),
+        upsert=[scored[item_id][0] for item_id in ordered if item_id in scored and scored[item_id][0] is not None],
+        remove_ids=sorted(item_id for item_id in affected if item_id not in scored or scored[item_id][0] is None),
+        decisions=[scored[item_id][1] for item_id in ordered if item_id in scored],
     )
 
 
@@ -46,16 +55,11 @@ def _replace(current: list, incoming: list, key: str) -> list:
 
 def _affected_ids(merged: CanonicalBatch, incoming: CanonicalBatch) -> set[str]:
     asset_ids = {action.asset_id for action in incoming.actions if action.asset_id}
-    measurements = {reading.measurement_type for reading in incoming.readings}
-    peer_actions = {
-        (reading.source, reading.action_id)
-        for reading in merged.readings
-        if reading.measurement_type in measurements
-    }
+    asset_ids.update(reading.asset_id for reading in incoming.readings if reading.asset_id)
     affected = {
         f"{action.source.value}:{action.action_id}"
         for action in merged.actions
-        if action.asset_id in asset_ids or (action.source, action.action_id) in peer_actions
+        if action.asset_id in asset_ids
     }
     affected.update(f"{action.source.value}:{action.action_id}" for action in incoming.actions)
     return affected

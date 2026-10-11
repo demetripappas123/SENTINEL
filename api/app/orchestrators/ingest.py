@@ -1,7 +1,11 @@
+"""POST /ingest/orbit and POST /ingest/spot. The body is the raw source payload.
+
+Kit files are loaded through the ingest service, not through an HTTP route.
+"""
 import psycopg
 from fastapi import APIRouter, HTTPException
 
-from app.schemas.canonical import CanonicalBatch
+from app.dtos.canonical import CanonicalBatch
 from app.services.ingest import ingest_orbit, ingest_spot
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])

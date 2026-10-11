@@ -1,3 +1,4 @@
+"""Shared parsing for timestamps, numbers, and optional strings used by every mapper."""
 from datetime import datetime
 
 

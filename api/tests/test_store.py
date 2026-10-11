@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 
 from app.demo_org import DEMO_ORGANIZATION_ID
-from app.schemas.canonical import CanonicalBatch, Mission, ReplayEvent, Source
-from app.schemas.queue import QueueUpdate
+from app.dtos.canonical import CanonicalBatch, Mission, ReplayEvent, Source
+from app.dtos.queue import QueueUpdate
 from app.services import dataset as dataset_service
 from app.services.store import persist
 

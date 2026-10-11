@@ -1,3 +1,4 @@
+"""The counts returned by GET /metrics."""
 from pydantic import BaseModel, Field
 
 

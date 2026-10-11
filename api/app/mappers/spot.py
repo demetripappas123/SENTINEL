@@ -1,5 +1,6 @@
+"""Read a Spot capture payload into a canonical batch. Best effort against the fixture shape."""
 from app.mappers.parse import first, number, text, timestamp
-from app.schemas.canonical import Action, AnomalyClaim, CanonicalBatch, Mission, Source
+from app.dtos.canonical import Action, AnomalyClaim, CanonicalBatch, Mission, Source
 
 
 def map_spot(payload: dict) -> CanonicalBatch:

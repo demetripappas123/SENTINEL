@@ -5,7 +5,7 @@ from app.orbit.catalog import MemoryCatalog
 from app.orbit.models import InspectionRecord
 from app.orbit.provider import MockOrbitProvider, OrbitUnavailable, RealOrbitProvider
 from app.orbit.service import inspection_batch
-from app.routers import orbit as orbit_router
+from app.orchestrators import orbit as orbit_router
 
 client = TestClient(app)
 

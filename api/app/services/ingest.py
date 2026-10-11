@@ -1,10 +1,15 @@
+"""Accept a mapped batch, score it against history, and commit both.
+
+The default organization is the North Yard demo. A webhook passes the
+organization that owns the subscription.
+"""
 from pathlib import Path
 
 from app.db import connect
 from app.mappers.kit import map_kit
 from app.mappers.orbit import map_orbit
 from app.mappers.spot import map_spot
-from app.schemas.canonical import CanonicalBatch
+from app.dtos.canonical import CanonicalBatch
 from app.services.queue import queue_updates
 from app.demo_org import DEMO_ORGANIZATION_ID
 from app.services.store import load_history, persist

@@ -1,3 +1,4 @@
+"""The dependency an orchestrator uses to require a signed-in user."""
 import psycopg
 from fastapi import Depends, Header, HTTPException
 

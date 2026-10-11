@@ -1,3 +1,4 @@
+"""Process entry. Load environment, then mount one orchestrator per route group."""
 import os
 from pathlib import Path
 
@@ -5,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, dataset, ingest, metrics, orbit, queue
+from app.orchestrators import auth, dataset, ingest, metrics, orbit, queue
 
 ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT / ".env.local")

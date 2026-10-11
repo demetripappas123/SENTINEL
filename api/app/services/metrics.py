@@ -1,5 +1,6 @@
+"""Operational metrics for one organization: versions, inspections, locations, battery, and missions."""
 from app.db import connect
-from app.schemas.metrics import (
+from app.dtos.metrics import (
     BatteryMetric,
     InspectionMetric,
     LocationMetric,

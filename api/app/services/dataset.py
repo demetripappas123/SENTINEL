@@ -1,7 +1,12 @@
+"""Read one organization's canonical rows and shape them for the screens.
+
+Replay events are derived from missions and actions on each read. They are
+not stored.
+"""
 from datetime import datetime, timezone
 
 from app.db import connect
-from app.schemas.canonical import (
+from app.dtos.canonical import (
     Action,
     AnomalyClaim,
     Asset,
@@ -11,7 +16,7 @@ from app.schemas.canonical import (
     Reading,
     Source,
 )
-from app.schemas.dataset import (
+from app.dtos.dataset import (
     ActionOut,
     AssetOut,
     FindingOut,

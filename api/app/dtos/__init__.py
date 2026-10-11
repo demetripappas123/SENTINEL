@@ -1,4 +1,9 @@
-from app.schemas.canonical import (
+"""Request and response shapes shared by the routes and the services.
+
+Canonical records match the sentinel tables. Queue and metrics shapes match
+what the web and mobile clients already render.
+"""
+from app.dtos.canonical import (
     Action,
     AnomalyClaim,
     Asset,
@@ -8,7 +13,7 @@ from app.schemas.canonical import (
     Reading,
     Source,
 )
-from app.schemas.queue import QueueItem, Verdict
+from app.dtos.queue import QueueItem, Verdict
 
 __all__ = [
     "Action",

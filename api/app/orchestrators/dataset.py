@@ -1,10 +1,11 @@
+"""GET /dataset and GET /dataset/live for the signed-in organization."""
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.deps import require_user
 from app.auth.store import UserAccount
-from app.schemas.canonical import Source
-from app.schemas.dataset import InspectionDataset
+from app.dtos.canonical import Source
+from app.dtos.dataset import InspectionDataset
 from app.services.dataset import get_dataset, get_live_dataset
 
 router = APIRouter(tags=["dataset"])
