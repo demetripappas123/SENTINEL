@@ -18,8 +18,13 @@ const MAX_WIDTH = 560;
 const DEFAULT_WIDTH = 380;
 const OPEN_KEY = "sentinel:chat-open";
 const WIDTH_KEY = "sentinel:chat-width";
+const SESSION_KEY = "sentinel:chat-session";
 
 type ChatMessage = { id: number; role: "user" | "assistant"; text: string };
+
+function newSessionId() {
+  return crypto.randomUUID();
+}
 
 type SideChatValue = {
   open: boolean;
@@ -101,9 +106,17 @@ export function SideChatPanel() {
   const { open, close, setWidth, width } = useSideChat();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [pending, setPending] = useState(false);
   const nextId = useRef(1);
+  const sessionId = useRef("");
   const input = useRef<HTMLTextAreaElement>(null);
   const log = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    sessionId.current = stored && stored.length >= 8 ? stored : newSessionId();
+    sessionStorage.setItem(SESSION_KEY, sessionId.current);
+  }, []);
 
   useEffect(() => {
     if (open) input.current?.focus();
@@ -113,18 +126,43 @@ export function SideChatPanel() {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [messages]);
 
-  function send() {
+  async function send() {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || pending) return;
+    if (!sessionId.current) {
+      sessionId.current = newSessionId();
+      sessionStorage.setItem(SESSION_KEY, sessionId.current);
+    }
     const userId = nextId.current++;
-    const replyId = nextId.current++;
-    setMessages((current) => [
-      ...current,
-      { id: userId, role: "user", text },
-      { id: replyId, role: "assistant", text: "Gemini isn't connected yet." },
-    ]);
+    setMessages((current) => [...current, { id: userId, role: "user", text }]);
     setDraft("");
     if (input.current) input.current.style.height = "";
+    setPending(true);
+    try {
+      const response = await fetch("/api/agent/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: text, session_id: sessionId.current }),
+      });
+      const body = await response.json().catch(() => ({}));
+      const reply =
+        response.ok && typeof body.reply === "string"
+          ? body.reply
+          : typeof body.detail === "string"
+            ? body.detail
+            : "The assistant is unavailable.";
+      setMessages((current) => [
+        ...current,
+        { id: nextId.current++, role: "assistant", text: reply },
+      ]);
+    } catch {
+      setMessages((current) => [
+        ...current,
+        { id: nextId.current++, role: "assistant", text: "The assistant is unavailable." },
+      ]);
+    } finally {
+      setPending(false);
+    }
   }
 
   function onSubmit(event: FormEvent) {
@@ -161,7 +199,11 @@ export function SideChatPanel() {
         <Button
           aria-label="New chat"
           className="quiet square"
-          onClick={() => setMessages([])}
+          onClick={() => {
+            setMessages([]);
+            sessionId.current = newSessionId();
+            sessionStorage.setItem(SESSION_KEY, sessionId.current);
+          }}
         >
           <Plus className="size-4" />
         </Button>
@@ -169,12 +211,10 @@ export function SideChatPanel() {
           <X className="size-4" />
         </Button>
       </header>
-      <div aria-live="polite" className="side-chat-log" ref={log}>
+      <div aria-busy={pending} aria-live="polite" className="side-chat-log" ref={log}>
         <div className="side-chat-thread">
-          {messages.length === 0 ? (
-            <p className="side-chat-empty">
-              Ask about an inspection or a review priority. Gemini isn't connected yet.
-            </p>
+          {messages.length === 0 && !pending ? (
+            <p className="side-chat-empty">Ask about an inspection or a review priority.</p>
           ) : (
             messages.map((message) => (
               <p className={"side-chat-bubble " + message.role} key={message.id}>
@@ -182,6 +222,7 @@ export function SideChatPanel() {
               </p>
             ))
           )}
+          {pending ? <p className="side-chat-empty">Checking the inspections.</p> : null}
         </div>
       </div>
       <form className="side-chat-composer" onSubmit={onSubmit}>
@@ -203,7 +244,7 @@ export function SideChatPanel() {
             }
           }}
         />
-        <Button aria-label="Send message" disabled={!draft.trim()} onClick={send}>
+        <Button aria-label="Send message" disabled={!draft.trim() || pending} onClick={send}>
           <ArrowUp className="size-4" />
         </Button>
       </form>

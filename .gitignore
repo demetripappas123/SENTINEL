@@ -45,6 +45,8 @@ next-env.d.ts
 .env.local
 .env.*.local
 api/.venv
+/tools/databricks/
+/tools/agentbricks/.venv/
 **/__pycache__/
 **/*.pyc
 node_modules/

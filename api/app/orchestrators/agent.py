@@ -9,7 +9,7 @@ import secrets
 import time
 
 import psycopg
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.auth.deps import require_user
 from app.auth.store import UserAccount
@@ -30,8 +30,11 @@ from app.dtos.agent import (
     SearchAssetsRequest,
     TemporalOverlapRequest,
     ToolEnvelope,
+    ChatReply,
+    ChatRequest,
 )
 from app.services.agent import tools
+from app.services.agent.chat import AgentFailed, AgentUnavailable, ask
 from app.services.agent.registry import manifest
 
 logger = logging.getLogger("sentinel.agent")
@@ -147,6 +150,32 @@ def _run(name: str, handler, body, user: UserAccount) -> ToolEnvelope:
                 status,
                 int((time.perf_counter() - started) * 1000),
             )
+
+
+@router.post("/api/agent/chat", response_model=ChatReply)
+def chat(
+    body: ChatRequest,
+    user: UserAccount = Depends(require_user),
+    authorization: str | None = Header(default=None),
+) -> ChatReply:
+    """Forward the operator's message to the LangGraph app for this session."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Sign in required")
+    started = time.perf_counter()
+    try:
+        reply = ask(body.message, body.session_id, user.id, authorization)
+    except AgentUnavailable as exc:
+        raise HTTPException(status_code=503, detail="The inspection assistant is not running.") from exc
+    except AgentFailed as exc:
+        raise HTTPException(status_code=502, detail=exc.detail) from exc
+    logger.info(
+        "agent_chat user=%s organization=%s session=%s latency_ms=%s",
+        user.id,
+        user.organization_id,
+        body.session_id,
+        int((time.perf_counter() - started) * 1000),
+    )
+    return ChatReply(session_id=body.session_id, reply=reply)
 
 
 def _readonly(conn) -> None:

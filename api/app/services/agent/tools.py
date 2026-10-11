@@ -233,6 +233,10 @@ def get_anomalies(conn, organization_id: str, request_id: str, body: AnomaliesRe
     decision_rows = []
     if start and end:
         decision_rows = [row for row in read.decisions_between(conn, organization_id, start, end, body.asset_id) if row["queued"]]
+    failed_checks = [row for row in decision_rows if row["verdict"] == "inspection_failure"]
+    if failed_checks:
+        warnings.append("Failed inspections are queue items, not anomalies, and they do not confirm a Spot label.")
+    decision_rows = [row for row in decision_rows if row["verdict"] != "inspection_failure"]
     firing_rows = read.firings(conn, organization_id, [row["id"] for row in decision_rows])
     threshold_by_decision = {}
     for firing in firing_rows:

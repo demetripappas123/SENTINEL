@@ -23,6 +23,7 @@ def test_every_router_is_mounted():
         "/api/orbit/organizations/{organization_id}/inspections",
         "/internal/agent/tools",
         "/internal/agent/tools/search-assets",
+        "/api/agent/chat",
     } <= paths
 
 

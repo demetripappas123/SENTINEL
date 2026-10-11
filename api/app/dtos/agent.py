@@ -145,6 +145,17 @@ class ComparePeriodsRequest(BaseModel):
     measurement_types: list[str] | None = None
 
 
+class ChatRequest(BaseModel):
+    model_config = _forbid()
+    message: str = Field(min_length=1, max_length=4000)
+    session_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,128}$")
+
+
+class ChatReply(BaseModel):
+    session_id: str
+    reply: str
+
+
 class HypothesisRequest(BaseModel):
     model_config = _forbid()
     hypothesis_type: Literal[
