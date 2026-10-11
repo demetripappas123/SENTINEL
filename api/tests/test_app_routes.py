@@ -21,6 +21,8 @@ def test_every_router_is_mounted():
         "/api/orbit/connections",
         "/api/webhooks/orbit/{webhook_id}",
         "/api/orbit/organizations/{organization_id}/inspections",
+        "/internal/agent/tools",
+        "/internal/agent/tools/search-assets",
     } <= paths
 
 

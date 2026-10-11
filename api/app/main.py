@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.orchestrators import auth, dataset, ingest, metrics, orbit, queue
+from app.orchestrators import agent, auth, dataset, ingest, metrics, orbit, queue
 
 ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT / ".env.local")
@@ -25,6 +25,7 @@ app.include_router(queue.router)
 app.include_router(metrics.router)
 app.include_router(auth.router)
 app.include_router(orbit.router)
+app.include_router(agent.router)
 
 
 @app.get("/health")
