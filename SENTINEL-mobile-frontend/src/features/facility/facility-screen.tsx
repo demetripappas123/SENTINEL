@@ -8,6 +8,7 @@ import { useReducedMotion } from "../../design/motion";
 import { fonts, radii, type Theme } from "../../design/tokens";
 import { FacilityMap } from "./facility-map";
 import { mapLayout } from "./map-layout";
+import { AssetSheet } from "./asset-sheet";
 
 export function FacilityScreen({
   colors,
@@ -21,6 +22,7 @@ export function FacilityScreen({
   const [selectedId, setSelectedId] = useState<string | null>("WP05");
   const [floor, setFloor] = useState<number | null>(null);
   const [floorOpen, setFloorOpen] = useState(false);
+  const [assetId, setAssetId] = useState<string | null>(null);
   useEffect(() => {
     if (
       floor !== null &&
@@ -43,6 +45,9 @@ export function FacilityScreen({
         .sort(
           (a, b) => Number(pending.includes(b)) - Number(pending.includes(a)),
         )
+    : [];
+  const assets = selected
+    ? data.assets.filter((a) => a.location_id === selected.location_id)
     : [];
   const pendingCount = selected
     ? pending.filter((f) => f.location_id === selected.location_id).length
@@ -257,6 +262,67 @@ export function FacilityScreen({
                   </View>
                 ))}
               </View>
+              {!!assets.length && (
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: colors.mutedForeground,
+                    paddingHorizontal: 16,
+                    paddingTop: 10,
+                    paddingBottom: 6,
+                    borderTopWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  Assets · {assets.length}
+                </Text>
+              )}
+              {assets.map((a) => (
+                <Pressable
+                  key={a.asset_id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View asset ${a.asset_name}`}
+                  onPress={() => setAssetId(a.asset_id)}
+                  style={({ pressed }) => ({
+                    minHeight: 48,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderTopWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: pressed ? colors.secondary : colors.card,
+                  })}
+                >
+                  <Icon name="scan" color={colors.mutedForeground} size={15} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "600",
+                        color: colors.foreground,
+                      }}
+                    >
+                      {a.asset_name}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontFamily: fonts.mono,
+                        color: colors.mutedForeground,
+                      }}
+                    >
+                      {a.asset_id} · {humanize(a.asset_type)}
+                    </Text>
+                  </View>
+                  <Icon
+                    name="chevron"
+                    size={15}
+                    color={colors.mutedForeground}
+                  />
+                </Pressable>
+              ))}
               {findings.map((f) => {
                 const reviewed = reviewedIds.includes(f.anomaly_id);
                 return (
@@ -418,6 +484,14 @@ export function FacilityScreen({
           </ScrollView>
         </Panel>
       )}
+      <AssetSheet
+        assetId={assetId}
+        data={data}
+        colors={colors}
+        reducedMotion={reducedMotion}
+        onClose={() => setAssetId(null)}
+        onInspect={onInspect}
+      />
       <Sheet
         title="Choose floor"
         visible={floorOpen}

@@ -1104,6 +1104,8 @@ input::placeholder {
   margin-left: auto;
 }
 dialog {
+  /* Tailwind's preflight zeroes margins, which un-centers modal dialogs. */
+  margin: auto;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 4px;

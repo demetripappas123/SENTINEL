@@ -177,3 +177,17 @@ it("clears a floor filter removed by refresh so remaining waypoints stay visible
     screen.getAllByRole("button", { name: /^Map waypoint / }),
   ).toHaveLength(5);
 });
+
+it("opens asset details from the selected waypoint and links to its findings", async () => {
+  await openFacility();
+  await fireEvent.press(
+    screen.getByRole("button", { name: "View asset Heat Exchanger 01" }),
+  );
+  expect(screen.getByText("Latest readings")).toBeTruthy();
+  expect(screen.getByText(/^Findings \(\d+\)$/)).toBeTruthy();
+  const findings = screen.getAllByRole("button", {
+    name: /^Inspect asset finding /,
+  });
+  await fireEvent.press(findings[0]);
+  expect(screen.queryByText("Latest readings")).toBeNull();
+});
