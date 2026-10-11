@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { dataset } from "@sentinel/core";
+import { getDashboardAnalytics } from "../lib/dashboard-analytics";
 import type { QueueItem } from "@sentinel/core/api";
 import { InspectionDataProvider } from "../lib/inspection-data";
 import { QueueProvider } from "../lib/queue-data";
@@ -11,6 +12,7 @@ import { ReviewQueue } from "./review";
 import { MissionDetail } from "./mission-detail";
 import { Facility } from "./facility";
 import { Replay } from "./replay";
+import { Missions } from "./missions";
 
 const queued: QueueItem[] = [
   {
@@ -37,6 +39,75 @@ function renderStored(ui: ReactNode) {
 }
 
 describe("dashboard workflows", () => {
+  it("shows an action's evidence when any part of its row is clicked", async () => {
+    renderStored(<MissionDetail missionId="M027" />);
+    const evidence = () =>
+      screen.getByRole("complementary", { name: "Action evidence" });
+    const rows = document.querySelectorAll("tr.action-row");
+    for (const index of [2, 6]) {
+      const cells = rows[index].querySelectorAll("td");
+      await userEvent.click(cells[4]);
+      expect(rows[index].querySelector("button")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(
+        within(evidence()).getByText("Location").nextSibling,
+      ).toHaveTextContent(cells[2].textContent!);
+    }
+  });
+  it("opens a mission from anywhere on its row, not just the name", async () => {
+    renderStored(<Missions />);
+    const link = screen.getByRole("link", { name: "Route 27" });
+    let opened = 0;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      opened++;
+    });
+    const cells = link.closest("tr")!.querySelectorAll("td");
+    await userEvent.click(cells[2]);
+    await userEvent.click(cells[4]);
+    expect(opened).toBe(2);
+    await userEvent.click(link);
+    expect(opened).toBe(3);
+  });
+  it("shows the checks recorded on a selected weekday", async () => {
+    renderStored(<Overview />);
+    const weekdays = getDashboardAnalytics(dataset, "ALL").weekdays;
+    const index = weekdays.findIndex((row) => row.count > 0);
+    const day = weekdays[index];
+    const name = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ][index];
+    const chart = screen.getByRole("group", {
+      name: "Completed checks by weekday",
+    });
+    const bar = within(chart).getByRole("button", {
+      name: `${name}: ${day.count} completed checks`,
+    });
+    await userEvent.click(bar);
+    expect(bar).toHaveAttribute("aria-pressed", "true");
+    const detail = screen.getByRole("region", { name: /checks$/ });
+    expect(within(detail).getByText("Passed").nextSibling).toHaveTextContent(
+      String(day.passed),
+    );
+    expect(within(detail).getByText("Failed").nextSibling).toHaveTextContent(
+      String(day.failed),
+    );
+    expect(within(detail).getAllByRole("listitem")).toHaveLength(
+      Math.min(day.dates.length, 4),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "All days" }));
+    expect(
+      screen.queryByRole("region", { name: /checks$/ }),
+    ).not.toBeInTheDocument();
+  });
   it("changes operational metrics when selecting V2", async () => {
     renderStored(<Overview />);
     await userEvent.click(
@@ -45,7 +116,7 @@ describe("dashboard workflows", () => {
     expect(screen.getByText("100.0")).toBeInTheDocument();
     expect(screen.getByText("91.1")).toBeInTheDocument();
   });
-  it("searches the queue, opens the item, and removes an acknowledged item", async () => {
+  it("searches the queue, shows the item, and removes an acknowledged item", async () => {
     renderStored(<ReviewQueue />);
     await userEvent.type(screen.getByRole("searchbox"), "HX-204");
     const row = screen.getByRole("button", {
@@ -53,10 +124,13 @@ describe("dashboard workflows", () => {
     });
     expect(row).toHaveAccessibleName(/Inspection failure/);
     await userEvent.click(row);
-    const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("Heat Exchanger 04")).toBeInTheDocument();
+    const detail = screen.getByRole("region", { name: "Review item" });
+    expect(within(detail).getByText("Heat Exchanger 04")).toBeInTheDocument();
+    expect(
+      within(detail).getByRole("link", { name: "Replay" }),
+    ).toHaveAttribute("href", "/replay?mission=M015&action=A0146");
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Mark reviewed" }),
+      within(detail).getByRole("button", { name: "Mark reviewed" }),
     );
     expect(screen.getByText("No matching queue items")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Reviewed" }));
@@ -157,6 +231,41 @@ describe("dashboard workflows", () => {
     expect(screen.getByText("16 / 500")).toBeInTheDocument();
     expect(screen.getByText(/ends during Route 23/)).toBeInTheDocument();
   });
+});
+
+it("jumps the replay to the next recorded failure and shows where it happened", async () => {
+  renderStored(<Replay />);
+  await userEvent.click(screen.getByRole("button", { name: "Next failure" }));
+  const now = screen.getByRole("complementary", { name: "Current event" });
+  expect(within(now).getAllByText("Action failed")[0].tagName).toBe("STRONG");
+  expect(within(now).getByText(/\(WP\d+\)/)).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Previous failure" }),
+  ).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Next failure" }));
+  expect(
+    screen.getByRole("button", { name: "Previous failure" }),
+  ).toBeEnabled();
+});
+
+it("opens the replay at a linked mission action", () => {
+  renderStored(<Replay initialMission="M015" initialAction="A0146" />);
+  expect(screen.getByRole("combobox", { name: "Mission" })).toHaveValue("M015");
+  const now = screen.getByRole("complementary", { name: "Current event" });
+  expect(within(now).getAllByText("Action failed")[0].tagName).toBe("STRONG");
+});
+
+it("summarises missions in one readout and one V1 against V2 board", () => {
+  renderStored(<Missions />);
+  expect(
+    screen.getByRole("region", { name: "Interpretation" }),
+  ).toHaveTextContent(/largest mission issue/i);
+  expect(
+    screen.getByRole("region", { name: "V1 against V2" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("table", { name: /failed actions by cause/i }),
+  ).toBeInTheDocument();
 });
 
 it("filters dashboard charts and links review priorities to the selected configuration", async () => {

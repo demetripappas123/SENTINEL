@@ -11,6 +11,7 @@ import {
 } from "@sentinel/core";
 import { useInspectionData } from "../lib/inspection-data";
 import { missionName, operatorText } from "../lib/operator-copy";
+import { forwardRowClick } from "../lib/row-link";
 import { Tag } from "./ui";
 
 export function MissionTable({
@@ -41,7 +42,11 @@ export function MissionTable({
               awaiting = actions.length - passed - failed,
               label = missionLabel(m);
             return (
-              <tr key={m.mission_id}>
+              <tr
+                key={m.mission_id}
+                className="linked-row"
+                onClick={forwardRowClick}
+              >
                 <td>
                   <Link
                     className="mission-link"
