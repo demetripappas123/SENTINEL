@@ -1,0 +1,33 @@
+export const palette = {
+  light: {
+    background: "#f7f6f3",
+    surface: "#ffffff",
+    raised: "#f3f1ec",
+    sidebar: "#f7f6f3",
+    ink: "#1c1917",
+    muted: "#57534e",
+    line: "#e7e5e4",
+    navy: "#0b1f3a",
+    onNavy: "#f7f6f3",
+    green: "#15803d",
+    red: "#dc2626",
+    yellow: "#ca8a04",
+    onStatus: "#ffffff",
+  },
+  dark: {
+    background: "#141414",
+    surface: "#1c1c1c",
+    raised: "#262626",
+    sidebar: "#1a1a1a",
+    ink: "#f5f5f4",
+    muted: "#a8a29e",
+    line: "#3f3f46",
+    navy: "#0b1f3a",
+    onNavy: "#f7f6f3",
+    green: "#16a34a",
+    red: "#dc2626",
+    yellow: "#ca8a04",
+    onStatus: "#ffffff",
+  },
+};
+export type ThemeColors = typeof palette.light;

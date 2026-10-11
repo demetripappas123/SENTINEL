@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "SENTINEL",
+    "slug": "sentinel",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.sentinel.inspections",
+      "supportsTablet": false,
+      "infoPlist": {
+        "EXDevMenuShowFloatingActionButton": false
+      }
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#0a0a0a"
+          }
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "platforms": [
+      "ios"
+    ]
+  }
+}
