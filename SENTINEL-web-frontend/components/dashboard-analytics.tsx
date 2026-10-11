@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useId, useState, type CSSProperties } from "react";
 import { ArrowUpRight, CheckCheck, MapPin, TriangleAlert } from "lucide-react";
 import {
   humanize,
@@ -11,7 +11,18 @@ import {
 import type { QueueItem } from "@sentinel/core/api";
 import { getDashboardAnalytics } from "../lib/dashboard-analytics";
 import { operatorText, placeName } from "../lib/operator-copy";
+import { forwardRowClick } from "../lib/row-link";
 import { Panel, Tag } from "./ui";
+
+const weekdayNames: Record<string, string> = {
+  Sun: "Sunday",
+  Mon: "Monday",
+  Tue: "Tuesday",
+  Wed: "Wednesday",
+  Thu: "Thursday",
+  Fri: "Friday",
+  Sat: "Saturday",
+};
 
 const dayLabel = (day: string) =>
   new Date(day + "T00:00:00Z").toLocaleDateString("en-US", {
@@ -56,6 +67,14 @@ export function DashboardAnalytics({
   const busiestDays = analytics.weekdays.filter(
     (day) => day.count === busiest && busiest > 0,
   );
+  const [selectedDayName, setSelectedDayName] = useState<string | null>(null);
+  // Cleared automatically if a filter leaves the chosen day without checks.
+  const selectedDay = analytics.weekdays.find(
+    (day) => day.day === selectedDayName && day.count > 0,
+  );
+  const dayRows = selectedDay
+    ? days.filter((row) => selectedDay.dates.includes(row.day))
+    : [];
   const visibleCauses = analytics.causes.slice(0, 5);
   const cause =
     visibleCauses.find((row) => row.cause === selectedCause) ??
@@ -94,6 +113,7 @@ export function DashboardAnalytics({
             </div>
             {days.length ? (
               <svg
+                key={configuration}
                 className="trend-chart"
                 viewBox="0 0 660 198"
                 role="img"
@@ -130,10 +150,13 @@ export function DashboardAnalytics({
                 {days.length > 1 && (
                   <polygon
                     points={`${x(days[0].day)},162 ${points} ${x(days[days.length - 1].day)},162`}
+                    className="trend-area"
                     fill={`url(#${gradient})`}
                   />
                 )}
                 <polyline
+                  className="trend-line"
+                  pathLength={1}
                   points={points}
                   fill="none"
                   stroke="var(--chart-accent)"
@@ -145,6 +168,7 @@ export function DashboardAnalytics({
                     key={row.day}
                     cx={x(row.day)}
                     cy={y(row.rate)}
+                    className="trend-point"
                     r="3.5"
                     fill="var(--chart-accent)"
                   >
@@ -243,7 +267,7 @@ export function DashboardAnalytics({
                 <thead>
                   <tr>
                     <th>Location</th>
-                    <th>Failed checks</th>
+                    <th>Open failures</th>
                     <th>Main cause</th>
                     <th>
                       <span className="sr-only">Inspect</span>
@@ -252,14 +276,22 @@ export function DashboardAnalytics({
                 </thead>
                 <tbody>
                   {analytics.hotspots.slice(0, 5).map((row) => (
-                    <tr key={row.locationId ?? "unknown"}>
+                    <tr
+                      key={row.locationId ?? "unknown"}
+                      className="linked-row"
+                      onClick={forwardRowClick}
+                    >
                       <td>
                         <strong>{placeName(data, row.locationId)}</strong>
                         <small>{row.total} completed checks</small>
                       </td>
                       <td>
                         <strong className="failure-number">{row.failed}</strong>
-                        <small>{row.rate.toFixed(0)}% at this location</small>
+                        <small>
+                          {row.fixed
+                            ? `${row.fixed} since fixed`
+                            : `${row.rate.toFixed(0)}% at this location`}
+                        </small>
                       </td>
                       <td>{operatorText(humanize(row.cause))}</td>
                       <td>
@@ -280,7 +312,9 @@ export function DashboardAnalytics({
             </div>
           ) : (
             <p className="panel-body small muted">
-              No failed checks in this selection.
+              {analytics.fixed
+                ? "Every failed check here has since passed."
+                : "No failed checks in this selection."}
             </p>
           )}
         </Panel>
@@ -296,6 +330,7 @@ export function DashboardAnalytics({
         >
           <section className="review-breakdown" aria-label="Review breakdown">
             <div
+              key={configuration}
               className="review-ring"
               style={{
                 background: queued.length
@@ -342,52 +377,139 @@ export function DashboardAnalytics({
       <div className="analytics-column">
         <Panel
           title="Inspection activity"
-          action={<span className="small muted">By weekday · UTC</span>}
+          action={
+            selectedDay ? (
+              <button
+                className="link-button"
+                onClick={() => setSelectedDayName(null)}
+              >
+                All days
+              </button>
+            ) : (
+              <span className="small muted">By weekday · UTC</span>
+            )
+          }
         >
           <div className="activity-summary">
             <strong>
-              {busiest
-                ? busiestDays.length === 1
-                  ? busiestDays[0].day
-                  : "Peak days"
-                : "—"}
+              {selectedDay
+                ? weekdayNames[selectedDay.day]
+                : busiest
+                  ? busiestDays.length === 1
+                    ? busiestDays[0].day
+                    : "Peak days"
+                  : "—"}
             </strong>
             <span className="small muted">
-              {busiest
-                ? `${busiest.toLocaleString()} checks${busiestDays.length > 1 ? " each" : ""}`
-                : "No dated checks yet"}
+              {selectedDay
+                ? `${selectedDay.count.toLocaleString()} checks · ${selectedDay.rate!.toFixed(1)}% passed`
+                : busiest
+                  ? `${busiest.toLocaleString()} checks${busiestDays.length > 1 ? " each" : ""}`
+                  : "No dated checks yet"}
             </span>
           </div>
           <div
-            className="weekday-chart"
-            role="img"
-            aria-label={
-              "Completed checks by weekday: " +
-              analytics.weekdays
-                .map((day) => `${day.day} ${day.count}`)
-                .join(", ")
-            }
+            className={"weekday-chart" + (selectedDay ? " has-selection" : "")}
+            role="group"
+            aria-label="Completed checks by weekday"
           >
             {analytics.weekdays.map((day) => (
-              <div
+              <button
                 className={
-                  "weekday " +
-                  (day.count === busiest && busiest > 0 ? "peak" : "")
+                  "weekday" +
+                  (day.count === busiest && busiest > 0 ? " peak" : "") +
+                  (selectedDay?.day === day.day ? " selected" : "")
                 }
                 key={day.day}
+                disabled={!day.count}
+                aria-pressed={selectedDay?.day === day.day}
+                aria-label={`${weekdayNames[day.day]}: ${day.count} completed checks`}
+                onClick={() =>
+                  setSelectedDayName(
+                    selectedDay?.day === day.day ? null : day.day,
+                  )
+                }
               >
                 <span className="weekday-value">{day.count || "—"}</span>
-                <div className="weekday-track">
+                <span className="weekday-track">
                   <i
                     style={{
                       height: (busiest ? (day.count / busiest) * 100 : 0) + "%",
                     }}
                   />
-                </div>
+                </span>
                 <span>{day.day}</span>
-              </div>
+              </button>
             ))}
           </div>
+          {selectedDay ? (
+            <section
+              className="activity-detail"
+              key={selectedDay.day}
+              aria-label={`${weekdayNames[selectedDay.day]} checks`}
+            >
+              <dl className="activity-stats">
+                <div>
+                  <dt>Passed</dt>
+                  <dd className="good">{selectedDay.passed}</dd>
+                </div>
+                <div>
+                  <dt>Failed</dt>
+                  <dd className={selectedDay.failed ? "bad" : ""}>
+                    {selectedDay.failed}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Missions</dt>
+                  <dd>{selectedDay.missions}</dd>
+                </div>
+              </dl>
+              <p className="small muted">
+                {selectedDay.topCause
+                  ? `Most common failure: ${operatorText(humanize(selectedDay.topCause.cause))} (${selectedDay.topCause.count})`
+                  : "No failed checks on this day."}
+                {selectedDay.fixed > 0 &&
+                  ` · ${selectedDay.fixed} since fixed by a passing check`}
+              </p>
+              <ul className="activity-dates">
+                {dayRows
+                  .slice(-4)
+                  .reverse()
+                  .map((row) => (
+                    <li key={row.day}>
+                      <span>{dayLabel(row.day)}</span>
+                      <span
+                        className="activity-split"
+                        role="img"
+                        aria-label={`${row.passed} passed, ${row.failed} failed`}
+                      >
+                        <i
+                          className="passed"
+                          style={{ flexGrow: row.passed }}
+                        />
+                        <i
+                          className="failed"
+                          style={{ flexGrow: row.failed }}
+                        />
+                      </span>
+                      <span className="mono">
+                        {row.passed}/{row.passed + row.failed}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+              {dayRows.length > 4 && (
+                <p className="analytics-note">
+                  Showing the four most recent of {dayRows.length}{" "}
+                  {weekdayNames[selectedDay.day]}s.
+                </p>
+              )}
+            </section>
+          ) : (
+            busiest > 0 && (
+              <p className="analytics-note">Select a day to see its checks.</p>
+            )
+          )}
         </Panel>
 
         <Panel
@@ -418,6 +540,7 @@ export function DashboardAnalytics({
                     y2={137 - 120 * Math.sin(angle)}
                     stroke={active ? "var(--good)" : "var(--border)"}
                     strokeWidth="5"
+                    style={{ "--i": i } as CSSProperties}
                   />
                 );
               })}
@@ -446,7 +569,8 @@ export function DashboardAnalytics({
           title="What’s going wrong"
           action={
             <span className="small muted">
-              {analytics.failed} failed checks
+              {analytics.openFailed} open{" "}
+              {analytics.openFailed === 1 ? "failure" : "failures"}
             </span>
           }
         >
@@ -473,7 +597,9 @@ export function DashboardAnalytics({
             ))}
             {!cause && (
               <p className="small muted">
-                No failures recorded for this selection.
+                {analytics.fixed
+                  ? "Every recorded failure has since passed."
+                  : "No failures recorded for this selection."}
               </p>
             )}
           </div>
@@ -488,6 +614,13 @@ export function DashboardAnalytics({
           {analytics.causes.length > 5 && (
             <p className="analytics-note">
               Showing the five most frequent recorded causes.
+            </p>
+          )}
+          {analytics.fixed > 0 && (
+            <p className="analytics-note">
+              {analytics.fixed} earlier{" "}
+              {analytics.fixed === 1 ? "failure has" : "failures have"} since
+              passed and {analytics.fixed === 1 ? "is" : "are"} not counted.
             </p>
           )}
         </Panel>

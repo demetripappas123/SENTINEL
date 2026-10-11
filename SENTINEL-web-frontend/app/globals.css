@@ -863,6 +863,9 @@ tr:last-child td {
 tbody tr:hover {
   background: var(--secondary);
 }
+tr.linked-row {
+  cursor: pointer;
+}
 td.number,
 th.number {
   text-align: right;
@@ -1872,6 +1875,99 @@ dialog::backdrop {
 }
 .weekday-value {
   font-size: 10px;
+}
+button.weekday {
+  padding: 4px 0;
+  border-radius: var(--radius-md);
+}
+button.weekday:disabled {
+  opacity: 1;
+  cursor: default;
+}
+button.weekday:not(:disabled):hover {
+  color: var(--foreground);
+}
+button.weekday:not(:disabled):hover .weekday-track i {
+  background: color-mix(in oklch, var(--chart-accent) 45%, var(--border));
+}
+button.weekday:focus-visible {
+  outline: 2px solid var(--ring);
+}
+.weekday-chart.has-selection .weekday.peak:not(.selected) {
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+.weekday-chart.has-selection .weekday.peak:not(.selected) .weekday-track i {
+  background: var(--border);
+}
+.weekday.selected {
+  color: var(--chart-accent);
+  font-weight: 600;
+}
+.weekday.selected .weekday-track i,
+button.weekday.selected:hover .weekday-track i {
+  background: var(--chart-accent);
+}
+.activity-detail {
+  display: grid;
+  gap: 10px;
+  padding: 12px 20px 14px;
+  border-top: 1px solid var(--border);
+}
+.activity-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.activity-stats dt {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.activity-stats dd {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+.activity-stats dd.good {
+  color: var(--good);
+}
+.activity-stats dd.bad {
+  color: var(--bad);
+}
+.activity-dates {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+.activity-dates li {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 10px;
+}
+.activity-dates .mono {
+  font-size: 11px;
+  text-align: right;
+  color: var(--muted-foreground);
+}
+.activity-split {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+}
+.activity-split i {
+  flex-basis: 0;
+  border-radius: 2px;
+}
+.activity-split .passed {
+  background: var(--good);
+}
+.activity-split .failed {
+  background: var(--bad);
 }
 .clean-gauge {
   position: relative;
@@ -3461,4 +3557,296 @@ kbd {
   color: oklch(0.8 0.1 150);
   background: color-mix(in oklch, var(--good) 15%, transparent);
   border-color: color-mix(in oklch, var(--good) 25%, transparent);
+}
+
+/* Motion. Short, ease-out, and only where it explains something: content
+   arriving, a value changing, or an element responding to the pointer. */
+:root {
+  --ease-out: cubic-bezier(0.22, 0.8, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+@property --sweep {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 360deg;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+@keyframes sweep {
+  from {
+    --sweep: 0deg;
+  }
+}
+@keyframes icon-turn {
+  from {
+    opacity: 0;
+    transform: rotate(-70deg) scale(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Page content settles in top to bottom; grids stagger their cells. */
+  #main > :not(.metrics, .analytics-grid, .dashboard-grid),
+  .metrics > *,
+  .analytics-column > *,
+  .dashboard-grid > * {
+    animation: rise 420ms var(--ease-out) backwards;
+    animation-delay: calc(var(--stagger, 0) * 35ms);
+  }
+  #main > :nth-child(2) {
+    --stagger: 1;
+  }
+  #main > :nth-child(3) {
+    --stagger: 2;
+  }
+  #main > :nth-child(4) {
+    --stagger: 3;
+  }
+  #main > :nth-child(5) {
+    --stagger: 4;
+  }
+  #main > :nth-child(n + 6) {
+    --stagger: 5;
+  }
+  .metrics > :nth-child(1) {
+    --stagger: 3;
+  }
+  .metrics > :nth-child(2) {
+    --stagger: 4;
+  }
+  .metrics > :nth-child(3) {
+    --stagger: 5;
+  }
+  .metrics > :nth-child(4) {
+    --stagger: 6;
+  }
+  .analytics-column:first-child > :nth-child(1) {
+    --stagger: 6;
+  }
+  .analytics-column:first-child > :nth-child(n + 2) {
+    --stagger: 8;
+  }
+  .analytics-column:last-child > :nth-child(1) {
+    --stagger: 7;
+  }
+  .analytics-column:last-child > :nth-child(n + 2) {
+    --stagger: 9;
+  }
+  .dashboard-grid > :nth-child(1) {
+    --stagger: 9;
+  }
+  .dashboard-grid > :nth-child(2) {
+    --stagger: 10;
+  }
+  .dashboard-grid > :nth-child(3) {
+    --stagger: 11;
+  }
+  .dashboard-grid > :nth-child(n + 4) {
+    --stagger: 12;
+  }
+
+  /* Loading: hold back briefly so fast fetches don't flash a skeleton,
+     then ripple the shimmer across the placeholder cards. */
+  .data-loading {
+    animation: fade-in 260ms ease-out 140ms backwards;
+  }
+  .loading-cards .skeleton:nth-child(2) {
+    animation-delay: 120ms;
+  }
+  .loading-cards .skeleton:nth-child(3) {
+    animation-delay: 240ms;
+  }
+  .loading-cards .skeleton:nth-child(4) {
+    animation-delay: 360ms;
+  }
+  .loading-chart.skeleton {
+    animation-delay: 480ms;
+  }
+
+  /* Cards answer the pointer with a firmer edge, not a jump. */
+  #main [data-slot="card"] {
+    transition: box-shadow 220ms var(--ease-out);
+  }
+  #main [data-slot="card"]:hover {
+    --tw-ring-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+    --tw-shadow: 0 12px 28px -20px oklch(0 0 0 / 0.45);
+  }
+  .metric {
+    transition:
+      transform 220ms var(--ease-out),
+      border-color 220ms,
+      box-shadow 220ms var(--ease-out);
+  }
+  .metric:hover {
+    transform: scale(1.02);
+    border-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+    box-shadow: 0 12px 28px -20px oklch(0 0 0 / 0.45);
+  }
+  .metric-icon {
+    transition: transform 220ms var(--ease-out);
+  }
+  .metric:hover .metric-icon {
+    transform: scale(1.15);
+  }
+
+  /* Rows pick up a brand edge on hover, echoing the active nav marker. */
+  .finding-row,
+  tbody tr td:first-child {
+    transition:
+      background 120ms,
+      box-shadow 160ms var(--ease-out);
+  }
+  .finding-row:hover,
+  tbody tr:hover td:first-child {
+    box-shadow: inset 2px 0 0 var(--brand);
+  }
+  aside nav a {
+    transition:
+      background 120ms,
+      color 120ms,
+      box-shadow 200ms var(--ease-out);
+  }
+  aside nav a svg {
+    transition: transform 200ms var(--ease-out);
+  }
+  aside nav a:hover svg {
+    transform: scale(1.12);
+  }
+
+  .map-hotspot {
+    transition:
+      transform 180ms var(--ease-out),
+      background 120ms,
+      border-color 120ms;
+  }
+  .map-hotspot:hover {
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+
+  header button[aria-label^="Switch to"] svg {
+    animation: icon-turn 360ms var(--ease-out);
+  }
+
+  /* Data: bars grow from their baseline on arrival and glide on filter
+     changes; rows within a chart follow one another. */
+  .bar > span,
+  .outcome-track i,
+  .cause-track i {
+    transform-origin: left;
+    animation: grow-x 700ms var(--ease-out) backwards;
+    animation-delay: calc(250ms + var(--row, 0) * 60ms);
+    transition: width 450ms var(--ease-out);
+  }
+  .weekday-track i {
+    transform-origin: bottom;
+    animation: grow-y 600ms var(--ease-out) backwards;
+    animation-delay: calc(250ms + var(--row, 0) * 45ms);
+    transition: height 450ms var(--ease-out);
+  }
+  :is(.reliability, .outcome-summary, .cause-list, .weekday-chart)
+    > :nth-child(2) {
+    --row: 1;
+  }
+  :is(.reliability, .outcome-summary, .cause-list, .weekday-chart)
+    > :nth-child(3) {
+    --row: 2;
+  }
+  :is(.reliability, .outcome-summary, .cause-list, .weekday-chart)
+    > :nth-child(4) {
+    --row: 3;
+  }
+  :is(.reliability, .outcome-summary, .cause-list, .weekday-chart)
+    > :nth-child(5) {
+    --row: 4;
+  }
+  :is(.reliability, .outcome-summary, .cause-list, .weekday-chart)
+    > :nth-child(6) {
+    --row: 5;
+  }
+  :is(.reliability, .outcome-summary, .cause-list, .weekday-chart)
+    > :nth-child(n + 7) {
+    --row: 6;
+  }
+
+  .activity-detail {
+    animation: rise 280ms var(--ease-out);
+  }
+  .action-inspector > * {
+    animation: fade-in 220ms ease-out;
+  }
+  .activity-split i {
+    transition: flex-grow 450ms var(--ease-out);
+  }
+
+  .trend-line {
+    stroke-dasharray: 1;
+    animation: draw 1100ms var(--ease-in-out) 200ms backwards;
+  }
+  .trend-area {
+    animation: fade-in 600ms ease-out 800ms backwards;
+  }
+  .trend-point {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: pop 300ms var(--ease-out) 1000ms backwards;
+    transition: transform 160ms var(--ease-out);
+  }
+  .trend-point:hover {
+    transform: scale(1.7);
+  }
+
+  /* Gauge ticks light up in sequence, on arrival and when the value moves. */
+  .clean-gauge line {
+    animation: fade-in 260ms ease-out backwards;
+    animation-delay: calc(200ms + var(--i, 0) * 14ms);
+    transition: stroke 240ms ease;
+    transition-delay: calc(var(--i, 0) * 10ms);
+  }
+
+  /* The review ring is revealed clockwise by a card-coloured cover. */
+  .review-ring {
+    position: relative;
+  }
+  .review-ring > div {
+    position: relative;
+    z-index: 1;
+  }
+  .review-ring::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    background: conic-gradient(transparent var(--sweep), var(--card) 0);
+    animation: sweep 900ms var(--ease-in-out) 250ms backwards;
+  }
 }

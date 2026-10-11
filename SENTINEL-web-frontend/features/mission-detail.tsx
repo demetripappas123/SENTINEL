@@ -19,6 +19,7 @@ import {
 } from "../lib/operator-copy";
 import { Capture } from "../components/findings";
 import { useInspectionData, useInspectionReady } from "../lib/inspection-data";
+import { forwardRowClick } from "../lib/row-link";
 
 export function MissionDetail({ missionId }: { missionId: string }) {
   const data = useInspectionData();
@@ -135,9 +136,10 @@ export function MissionDetail({ missionId }: { missionId: string }) {
                   <tr
                     key={a.action_id}
                     className={
-                      "action-row " +
+                      "action-row linked-row " +
                       (selected?.action_id === a.action_id ? "selected" : "")
                     }
+                    onClick={forwardRowClick}
                   >
                     <td className="mono muted">
                       {a.sequence == null
@@ -180,6 +182,7 @@ export function MissionDetail({ missionId }: { missionId: string }) {
         </Panel>
         {selected ? (
           <aside
+            key={selected.action_id}
             className="panel action-inspector"
             aria-label="Action evidence"
           >
