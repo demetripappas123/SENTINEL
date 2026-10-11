@@ -9,6 +9,7 @@ import {
 } from "@sentinel/core";
 import { operatorText, placeName } from "../lib/operator-copy";
 import { FacilityMap } from "../components/facility-map";
+import { AssetDialog } from "../components/asset-dialog";
 import { FindingDialog, FindingRow } from "../components/findings";
 import {
   ConfigurationControl,
@@ -21,7 +22,8 @@ import { useInspectionData } from "../lib/inspection-data";
 export function Facility() {
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
   const [waypoint, setWaypoint] = useState("WP05"),
-    [selected, setSelected] = useState<Finding | null>(null);
+    [selected, setSelected] = useState<Finding | null>(null),
+    [assetId, setAssetId] = useState<string | null>(null);
   const data = useInspectionData();
   const { reviewedIds, markReviewed } = useReviews();
   const active = data.locations.some((l) => l.location_id === waypoint)
@@ -101,6 +103,21 @@ export function Facility() {
               reviewed={reviewedIds.includes(f.anomaly_id)}
             />
           ))}
+          {data.assets
+            .filter((a) => a.location_id === active)
+            .map((a) => (
+              <button
+                key={a.asset_id}
+                className="waypoint-row"
+                aria-label={"View asset " + a.asset_name}
+                onClick={() => setAssetId(a.asset_id)}
+              >
+                <span>{a.asset_name}</span>
+                <span className="small muted" style={{ marginLeft: "auto" }}>
+                  {a.asset_id} · {humanize(a.asset_type)}
+                </span>
+              </button>
+            ))}
         </Panel>
         <Panel
           title="Waypoints"
@@ -137,6 +154,12 @@ export function Facility() {
           })}
         </Panel>
       </div>
+      <AssetDialog
+        assetId={assetId}
+        onClose={() => setAssetId(null)}
+        onOpenFinding={setSelected}
+        reviewedIds={reviewedIds}
+      />
       <FindingDialog
         finding={selected}
         onClose={() => setSelected(null)}

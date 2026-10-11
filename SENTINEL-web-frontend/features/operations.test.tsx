@@ -166,6 +166,21 @@ describe("dashboard workflows", () => {
       screen.getByRole("heading", { name: "Heat Exchanger Area" }),
     ).toBeInTheDocument();
   });
+  it("opens a waypoint asset and links through to its findings", async () => {
+    renderStored(<Facility />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "View asset Heat Exchanger 01" }),
+    );
+    const asset = screen.getByRole("dialog", { name: "Heat Exchanger 01" });
+    expect(within(asset).getByText("Latest readings")).toBeInTheDocument();
+    const findings = within(asset).getAllByRole("button", {
+      name: /Heat Exchanger 01/,
+    });
+    await userEvent.click(findings[0]);
+    expect(
+      screen.queryByRole("dialog", { name: "Heat Exchanger 01" }),
+    ).not.toBeInTheDocument();
+  });
   it("filters waypoint statistics and findings by configuration", async () => {
     renderStored(<Facility />);
     expect(screen.getByText("43")).toBeInTheDocument();

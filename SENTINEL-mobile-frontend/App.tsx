@@ -55,8 +55,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 // With an API URL the app shows only backend data, never the bundled fixture.
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+// The API scopes data to the signed-in organization; SessionGate sets this.
+let sessionToken: string | null = null;
 const defaultRepository = apiUrl
-  ? createApiRepository(apiUrl)
+  ? createApiRepository(apiUrl, {
+      fetcher: (input, init) => {
+        const headers = new Headers(init?.headers);
+        if (sessionToken) headers.set("Authorization", "Bearer " + sessionToken);
+        return fetch(input, { ...init, headers });
+      },
+    })
   : createFixtureRepository();
 
 export default function App({
@@ -123,6 +131,7 @@ function SessionGate({
         return response.ok ? saved : null;
       })
       .then((next) => {
+        sessionToken = next?.token ?? null;
         if (active) setSession(next);
       })
       .catch(() => {
@@ -132,6 +141,10 @@ function SessionGate({
       active = false;
     };
   }, [requireAuth]);
+  useEffect(() => {
+    // The app hides the splash itself; the login screen must do it here.
+    if (session === null) void SplashScreen.hideAsync().catch(() => undefined);
+  }, [session]);
   if (!requireAuth) return children;
   if (session === undefined) return null;
   if (!session) {
@@ -140,6 +153,7 @@ function SessionGate({
         colors={themes.light}
         onSignedIn={(next) => {
           void AsyncStorage.setItem(SESSION_KEY, JSON.stringify(next));
+          sessionToken = next.token;
           setSession(next);
         }}
       />
