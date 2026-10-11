@@ -72,7 +72,7 @@ def _action(action_id: str, failure_type: str | None = None) -> Action:
         status="SUCCESS",
         failure_type=failure_type,
         duration_sec=10,
-        scenario="BASELINE",
+        configuration_version="V1",
     )
 
 
@@ -95,7 +95,6 @@ def test_partial_orbit_mission_keeps_missing_fields_null():
     assert mission.end_time is None
     assert mission.duration_min is None
     assert mission.start_battery_pct is None
-    assert mission.scenario is None
     assert mission.configuration_version is None
 
 

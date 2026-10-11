@@ -31,7 +31,7 @@ export function getMetrics(
   configuration: Configuration,
 ): Metrics {
   const missions = data.missions.filter(
-    (m) => configuration === "ALL" || m.scenario === configuration,
+    (m) => configuration === "ALL" || m.configuration_version === configuration,
   );
   const ids = new Set(missions.map((m) => m.mission_id));
   const actions = data.actions.filter((a) => ids.has(a.mission_id));
@@ -68,7 +68,7 @@ export function getFindings(
   const reviewed = new Set(reviewedIds);
   const missionIds = new Set(
     data.missions
-      .filter((m) => configuration === "ALL" || m.scenario === configuration)
+      .filter((m) => configuration === "ALL" || m.configuration_version === configuration)
       .map((m) => m.mission_id),
   );
   const assets = new Map(data.assets.map((a) => [a.asset_id, a.asset_name]));

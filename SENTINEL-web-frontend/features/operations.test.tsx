@@ -299,5 +299,5 @@ it("filters dashboard charts and links review priorities to the selected configu
   );
   expect(
     screen.getByRole("link", { name: /open review queue/i }),
-  ).toHaveAttribute("href", "/review?configuration=IMPROVED");
+  ).toHaveAttribute("href", "/review?configuration=V2");
 });

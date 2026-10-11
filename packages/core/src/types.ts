@@ -1,10 +1,9 @@
-export type Configuration = "ALL" | "BASELINE" | "IMPROVED";
+export type Configuration = "ALL" | "V1" | "V2";
 export type FindingStatus = "required" | "all" | "reviewed";
 
 export interface Mission {
   mission_id: string;
   mission_name: string;
-  scenario: string | null;
   configuration_version: string | null;
   start_time: string | null;
   end_time: string | null;
@@ -25,7 +24,7 @@ export interface Action {
   status: string;
   failure_type: string;
   duration_sec: number | null;
-  scenario: string | null;
+  configuration_version: string | null;
 }
 export interface Finding {
   anomaly_id: string;

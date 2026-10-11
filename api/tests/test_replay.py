@@ -30,8 +30,9 @@ def test_kit_csvs_rebuild_the_recorded_replay():
         assert derived.mission_id == event["mission_id"]
         assert derived.timestamp == event["timestamp"]
         assert derived.event_type == event["event_type"]
-        assert derived.details.keys() == event["details"].keys()
-        for key, value in event["details"].items():
+        details = {key: value for key, value in event["details"].items() if key != "scenario"}
+        assert derived.details.keys() == details.keys()
+        for key, value in details.items():
             assert _same(derived.details[key], value)
 
 

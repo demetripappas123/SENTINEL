@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS sentinel.rule_decisions (
         REFERENCES sentinel.actions (source, action_id),
     CHECK (
         verdict IS NULL
-        OR verdict IN ('inspection_failure', 'equipment_finding', 'unsupported_claim')
+        OR verdict IN ('inspection_failure', 'equipment_finding', 'potential_anomaly', 'unsupported_claim')
     ),
     CHECK (
         (queued AND verdict IS NOT NULL AND rank IS NOT NULL)

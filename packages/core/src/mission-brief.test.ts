@@ -5,11 +5,11 @@ import type { InspectionDataset } from "./types";
 
 const data: InspectionDataset = {
   missions: [
-    mission("M1", "BASELINE", "V1", "COMPLETED", 20),
-    mission("M2", "BASELINE", "V1", "COMPLETED", 22),
-    mission("M3", "BASELINE", "V1", "COMPLETED", 21),
-    mission("M4", "BASELINE", "V1", "COMPLETED", 40),
-    mission("M5", "IMPROVED", "V2", "FAILED", 18),
+    mission("M1", "V1", "COMPLETED", 20),
+    mission("M2", "V1", "COMPLETED", 22),
+    mission("M3", "V1", "COMPLETED", 21),
+    mission("M4", "V1", "COMPLETED", 40),
+    mission("M5", "V2", "FAILED", 18),
   ],
   actions: [
     action("A1", "M1", "FAILED", "OBSTACLE_DETECTION", "WP05", 30),
@@ -47,6 +47,7 @@ describe("mission brief", () => {
       { key: "failed_action", count: 2 },
       { key: "bad_reading", count: 1 },
       { key: "anomaly_with_evidence", count: 1 },
+      { key: "potential_anomaly", count: 0 },
       { key: "anomaly_without_evidence", count: 1 },
     ]);
     const text = [
@@ -57,7 +58,6 @@ describe("mission brief", () => {
     expect(brief.interpretation.lead).toMatch(/Failed Action, 2 of 5/);
     expect(brief.interpretation.lead).toMatch(/Obstacle Detection \(2\) and Sensor Timeout \(1\)/);
     expect(text).toMatch(/below 40% battery/);
-    expect(text).toMatch(/WP05 and WP09/);
     expect(text).toMatch(/completed missions still contain/);
     expect(text).toMatch(/outside the other readings/);
     expect(text).toMatch(/not backed by a good reading/);
@@ -70,7 +70,6 @@ describe("mission brief", () => {
 
 function mission(
   mission_id: string,
-  scenario: string,
   configuration_version: string,
   mission_status: string,
   duration_min: number,
@@ -78,7 +77,6 @@ function mission(
   return {
     mission_id,
     mission_name: mission_id,
-    scenario,
     configuration_version,
     start_time: null,
     end_time: null,
@@ -109,7 +107,7 @@ function action(
     status,
     failure_type,
     duration_sec: 10,
-    scenario: mission_id === "M5" ? "IMPROVED" : "BASELINE",
+    configuration_version: mission_id === "M5" ? "V2" : "V1",
   };
 }
 

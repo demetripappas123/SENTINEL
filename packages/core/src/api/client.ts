@@ -5,7 +5,6 @@ export type DataSource = "kit" | "orbit" | "spot";
 export interface VersionMetric {
   source: string;
   configuration_version: string | null;
-  scenario: string | null;
   mission_count: number;
   completed_missions: number;
   mission_completion_pct: number | null;
@@ -58,7 +57,11 @@ export interface OperationalMetrics {
 
 export interface QueueItem {
   id: string;
-  verdict: "inspection_failure" | "equipment_finding" | "unsupported_claim";
+  verdict:
+    | "inspection_failure"
+    | "equipment_finding"
+    | "potential_anomaly"
+    | "unsupported_claim";
   cause: string;
   explanation: string;
   mission_id: string;
@@ -83,7 +86,6 @@ function isVersionMetric(value: unknown): value is VersionMetric {
   return (
     typeof value.source === "string" &&
     isTextOrNull(value.configuration_version) &&
-    isTextOrNull(value.scenario) &&
     [
       "mission_count",
       "completed_missions",
@@ -161,7 +163,7 @@ export function isQueueItem(value: unknown): value is QueueItem {
       (key) => typeof value[key] === "string",
     ) &&
     typeof value.verdict === "string" &&
-    ["inspection_failure", "equipment_finding", "unsupported_claim"].includes(
+    ["inspection_failure", "equipment_finding", "potential_anomaly", "unsupported_claim"].includes(
       value.verdict,
     ) &&
     ["action_id", "asset_id", "location_id"].every(
@@ -201,7 +203,6 @@ const DATASET_FIELDS: Record<
   missions: {
     mission_id: s,
     mission_name: s,
-    scenario: sNull,
     configuration_version: sNull,
     start_time: sNull,
     end_time: sNull,
@@ -222,7 +223,7 @@ const DATASET_FIELDS: Record<
     status: s,
     failure_type: s,
     duration_sec: nNull,
-    scenario: sNull,
+    configuration_version: sNull,
   },
   findings: {
     anomaly_id: s,

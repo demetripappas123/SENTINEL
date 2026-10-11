@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS sentinel.missions (
     source TEXT NOT NULL CHECK (source IN ('kit', 'orbit', 'spot')),
     mission_id TEXT NOT NULL,
     mission_name TEXT NOT NULL,
-    scenario TEXT,
     configuration_version TEXT,
     start_time TIMESTAMPTZ,
     end_time TIMESTAMPTZ,
@@ -58,7 +57,6 @@ CREATE TABLE IF NOT EXISTS sentinel.actions (
     status TEXT NOT NULL,
     failure_type TEXT,
     duration_sec DOUBLE PRECISION,
-    scenario TEXT,
     configuration_version TEXT,
     PRIMARY KEY (source, action_id),
     FOREIGN KEY (source, mission_id)

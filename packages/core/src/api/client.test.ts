@@ -150,7 +150,6 @@ describe("initial FastAPI client", () => {
         missions: [
           {
             ...challenge.missions[0],
-            scenario: null,
             configuration_version: null,
             duration_min: null,
             start_battery_pct: null,

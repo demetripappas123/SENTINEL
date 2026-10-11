@@ -17,6 +17,7 @@ const ISSUE_LABELS: Record<string, string> = {
   failed_action: "Failed action",
   bad_reading: "Bad reading",
   anomaly_with_evidence: "Anomaly with evidence",
+  potential_anomaly: "Potential anomaly",
   anomaly_without_evidence: "Anomaly without evidence",
 };
 
@@ -24,6 +25,7 @@ const ISSUE_COLORS: Record<string, string> = {
   failed_action: "var(--chart-red)",
   bad_reading: "var(--chart-orange)",
   anomaly_with_evidence: "var(--chart-yellow)",
+  potential_anomaly: "var(--mid)",
   anomaly_without_evidence: "var(--chart-2)",
 };
 
@@ -55,7 +57,7 @@ export function Missions() {
   const data = useInspectionData();
   const queue = useQueue();
   const missions = data.missions
-    .filter((m) => configuration === "ALL" || m.scenario === configuration)
+    .filter((m) => configuration === "ALL" || m.configuration_version === configuration)
     .slice()
     .reverse();
   const brief = missionBrief(data, queue, configuration);

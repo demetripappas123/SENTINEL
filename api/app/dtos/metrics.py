@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field
 class VersionMetric(BaseModel):
     source: str
     configuration_version: str | None = None
-    scenario: str | None = None
     mission_count: int
     completed_missions: int
     mission_completion_pct: float | None = None

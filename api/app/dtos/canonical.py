@@ -15,7 +15,6 @@ class Mission(BaseModel):
     source: Source
     mission_id: str
     mission_name: str
-    scenario: str | None = None
     configuration_version: str | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
@@ -39,7 +38,6 @@ class Action(BaseModel):
     status: str
     failure_type: str | None = None
     duration_sec: float | None = None
-    scenario: str | None = None
     configuration_version: str | None = None
 
 

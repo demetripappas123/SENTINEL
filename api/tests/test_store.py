@@ -43,7 +43,7 @@ def _event() -> ReplayEvent:
         mission_id="M001",
         timestamp=STARTED,
         event_type="MISSION_STARTED",
-        details={"scenario": "BASELINE", "battery_pct": 82},
+        details={"configuration_version": "V1", "battery_pct": 82},
     )
 
 
@@ -71,6 +71,6 @@ def test_get_dataset_derives_replay_from_source_missions(monkeypatch):
             "mission_id": "M001",
             "timestamp": "2026-09-01T18:00:00",
             "event_type": "MISSION_STARTED",
-            "details": {"scenario": None, "configuration_version": None, "battery_pct": None},
+            "details": {"configuration_version": None, "battery_pct": None},
         }
     ]

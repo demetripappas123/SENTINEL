@@ -5,7 +5,7 @@ CREATE SCHEMA IF NOT EXISTS sentinel;
 CREATE TABLE IF NOT EXISTS sentinel.queue_items (
     source TEXT NOT NULL CHECK (source IN ('kit', 'orbit', 'spot')),
     action_id TEXT NOT NULL,
-    verdict TEXT NOT NULL CHECK (verdict IN ('inspection_failure', 'equipment_finding', 'unsupported_claim')),
+    verdict TEXT NOT NULL CHECK (verdict IN ('inspection_failure', 'equipment_finding', 'potential_anomaly', 'unsupported_claim')),
     cause TEXT NOT NULL,
     explanation TEXT NOT NULL,
     mission_id TEXT NOT NULL,

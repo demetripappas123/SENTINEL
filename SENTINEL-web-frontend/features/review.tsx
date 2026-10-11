@@ -41,6 +41,7 @@ type Grouping = "priority" | "cause" | "place";
 const VERDICT_TONE: Record<QueueItem["verdict"], string> = {
   inspection_failure: "amber",
   equipment_finding: "red",
+  potential_anomaly: "orange",
   unsupported_claim: "blue",
 };
 
@@ -64,14 +65,14 @@ export function ReviewQueue({
   const data = useInspectionData();
   const queue = useQueue();
   const { reviewedIds, markReviewed, resetReviews } = useReviews();
-  const scenarios = new globalThis.Map(
-    data.missions.map((mission) => [mission.mission_id, mission.scenario]),
+  const versions = new globalThis.Map(
+    data.missions.map((mission) => [mission.mission_id, mission.configuration_version]),
   );
   const scope = selectQueue(queue, {
     configuration,
     status: "all",
     missionId,
-    scenarios,
+    versions,
   });
   const needle = query.trim().toLowerCase();
   const matches = selectQueue(queue, {
@@ -79,7 +80,7 @@ export function ReviewQueue({
     status,
     reviewedIds,
     missionId,
-    scenarios,
+    versions,
   })
     .filter((item) =>
       [

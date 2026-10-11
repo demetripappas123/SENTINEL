@@ -6,6 +6,7 @@ export type IssueKind =
   | "failed_action"
   | "bad_reading"
   | "anomaly_with_evidence"
+  | "potential_anomaly"
   | "anomaly_without_evidence";
 
 export interface CountBar {
@@ -29,10 +30,9 @@ const ISSUE_ORDER: IssueKind[] = [
   "failed_action",
   "bad_reading",
   "anomaly_with_evidence",
+  "potential_anomaly",
   "anomaly_without_evidence",
 ];
-
-const HOTSPOTS = new Set(["WP05", "WP09"]);
 
 export function missionBrief(
   data: InspectionDataset,
@@ -40,13 +40,13 @@ export function missionBrief(
   configuration: Configuration = "ALL",
 ): MissionBrief {
   const missions = data.missions.filter(
-    (mission) => configuration === "ALL" || mission.scenario === configuration,
+    (mission) => configuration === "ALL" || mission.configuration_version === configuration,
   );
   const missionIds = new Set(missions.map((mission) => mission.mission_id));
   const actions = data.actions.filter((action) => missionIds.has(action.mission_id));
   const failed = actions.filter((action) => action.status === "FAILED");
-  const scenarios = new Map(missions.map((mission) => [mission.mission_id, mission.scenario]));
-  const queued = selectQueue(queue, { configuration, status: "all", scenarios });
+  const versions = new Map(missions.map((mission) => [mission.mission_id, mission.configuration_version]));
+  const queued = selectQueue(queue, { configuration, status: "all", versions });
   const issues = emptyIssues();
   for (const item of queued) {
     issues[issueKind(item)] += 1;
@@ -63,6 +63,7 @@ export function missionBrief(
 
 function issueKind(item: QueueItem): IssueKind {
   if (item.verdict === "equipment_finding") return "anomaly_with_evidence";
+  if (item.verdict === "potential_anomaly") return "potential_anomaly";
   if (item.verdict === "unsupported_claim") return "anomaly_without_evidence";
   const status = item.evidence.action_status;
   if (item.cause === "QUESTIONABLE_READING" || status !== "FAILED") return "bad_reading";
@@ -74,6 +75,7 @@ function emptyIssues(): Record<IssueKind, number> {
     failed_action: 0,
     bad_reading: 0,
     anomaly_with_evidence: 0,
+    potential_anomaly: 0,
     anomaly_without_evidence: 0,
   };
 }
@@ -90,6 +92,7 @@ const ISSUE_LABEL: Record<IssueKind, string> = {
   failed_action: "Failed Action",
   bad_reading: "Bad Reading",
   anomaly_with_evidence: "Anomaly With Evidence",
+  potential_anomaly: "Potential Anomaly",
   anomaly_without_evidence: "Anomaly Without Evidence",
 };
 
@@ -98,6 +101,8 @@ const ISSUE_MEANING: Record<IssueKind, string> = {
   bad_reading: "the reading is questionable, separate from a stored action failure",
   anomaly_with_evidence:
     "a successful action has a good reading outside the other readings of that measurement",
+  potential_anomaly:
+    "a good reading is above the limit for that asset type, without enough history to confirm it",
   anomaly_without_evidence:
     "the action did not fail, and the anomaly label is not backed by a good reading outside the normal range",
 };
@@ -131,10 +136,6 @@ function interpretation(
   );
   if (repeatedReasons) {
     steps.push(`Review ${plural(repeatedReasons, "asset")} that failed the same way more than once.`);
-  }
-  const hotspots = failed.filter((action) => action.location_id != null && HOTSPOTS.has(action.location_id));
-  if (hotspots.length) {
-    steps.push(`Check the ${hotspots.length} failures at WP05 and WP09 before the other waypoints.`);
   }
   const critical = failed.filter((action) =>
     queued.some(
@@ -239,7 +240,7 @@ function longMissions(missions: Mission[]): string[] {
 
 function versionGap(actions: Action[]): string[] {
   const rate = (version: string) => {
-    const rows = actions.filter((action) => action.scenario === versionScenario(version));
+    const rows = actions.filter((action) => action.configuration_version === version);
     if (!rows.length) return null;
     return (rows.filter((action) => action.status === "SUCCESS").length / rows.length) * 100;
   };
@@ -252,10 +253,6 @@ function versionGap(actions: Action[]): string[] {
   return [
     `${higher} action success is ${Math.abs(gap)} points above the other configuration.`,
   ];
-}
-
-function versionScenario(version: string): string {
-  return version === "V1" ? "BASELINE" : "IMPROVED";
 }
 
 function median(values: number[]): number {

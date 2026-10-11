@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 class MissionOut(BaseModel):
     mission_id: str
     mission_name: str
-    scenario: str | None = None
     configuration_version: str | None = None
     start_time: str | None = None
     end_time: str | None = None
@@ -31,7 +30,7 @@ class ActionOut(BaseModel):
     status: str
     failure_type: str
     duration_sec: float | None = None
-    scenario: str | None = None
+    configuration_version: str | None = None
 
 
 class FindingOut(BaseModel):

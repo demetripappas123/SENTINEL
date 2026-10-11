@@ -291,6 +291,10 @@ small,
   background: var(--accent-foreground);
   color: #1c1917;
 }
+.tag.orange {
+  background: var(--chart-orange);
+  color: #1c1917;
+}
 .tag.red {
   background: var(--destructive);
   color: #fff;
@@ -1601,6 +1605,9 @@ dialog::backdrop {
 }
 .legend-dot.retry {
   background: var(--mid);
+}
+.legend-dot.watch {
+  background: var(--chart-orange);
 }
 .legend-dot.verify {
   background: var(--chart-accent);

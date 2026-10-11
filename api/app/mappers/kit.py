@@ -98,7 +98,6 @@ def _mission(row: dict[str, str]) -> Mission:
         source=Source.kit,
         mission_id=required_text(row.get("mission_id"), "mission_id"),
         mission_name=required_text(row.get("mission_name"), "mission_name"),
-        scenario=text(row.get("scenario")),
         configuration_version=text(row.get("configuration_version")),
         start_time=timestamp(row.get("start_time")),
         end_time=timestamp(row.get("end_time")),
@@ -124,7 +123,6 @@ def _action(row: dict[str, str]) -> Action:
         status=required_text(row.get("status"), "status"),
         failure_type=text(row.get("failure_type")),
         duration_sec=number(row.get("duration_sec")),
-        scenario=text(row.get("scenario")),
         configuration_version=text(row.get("configuration_version")),
     )
 

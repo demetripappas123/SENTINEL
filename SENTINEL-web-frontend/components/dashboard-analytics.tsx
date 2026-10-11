@@ -58,10 +58,16 @@ export function DashboardAnalytics({
   const equipment = queued.filter(
     (item) => item.verdict === "equipment_finding",
   ).length;
-  const verification = queued.length - retries - equipment;
+  const potential = queued.filter(
+    (item) => item.verdict === "potential_anomaly",
+  ).length;
+  const verification = queued.length - retries - equipment - potential;
   const retryEnd = queued.length ? (retries / queued.length) * 100 : 0;
   const equipmentEnd = queued.length
     ? ((retries + equipment) / queued.length) * 100
+    : 0;
+  const potentialEnd = queued.length
+    ? ((retries + equipment + potential) / queued.length) * 100
     : 0;
   const busiest = Math.max(...analytics.weekdays.map((day) => day.count));
   const busiestDays = analytics.weekdays.filter(
@@ -334,7 +340,7 @@ export function DashboardAnalytics({
               className="review-ring"
               style={{
                 background: queued.length
-                  ? `conic-gradient(var(--mid) 0% ${retryEnd}%, var(--bad) ${retryEnd}% ${equipmentEnd}%, var(--chart-accent) ${equipmentEnd}% 100%)`
+                  ? `conic-gradient(var(--mid) 0% ${retryEnd}%, var(--bad) ${retryEnd}% ${equipmentEnd}%, var(--chart-orange) ${equipmentEnd}% ${potentialEnd}%, var(--chart-accent) ${potentialEnd}% 100%)`
                   : "var(--border)",
               }}
               aria-hidden="true"
@@ -361,6 +367,17 @@ export function DashboardAnalytics({
                   <strong>{equipment}</strong> equipment{" "}
                   {equipment === 1 ? "finding" : "findings"}
                   <small>Check the equipment’s condition.</small>
+                </span>
+              </li>
+              <li>
+                <i className="legend-dot watch" />
+                <span>
+                  <strong>{potential}</strong> potential{" "}
+                  {potential === 1 ? "anomaly" : "anomalies"}
+                  <small>
+                    Above the limit for this equipment. History is too thin to
+                    confirm it.
+                  </small>
                 </span>
               </li>
               <li>

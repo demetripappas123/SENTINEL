@@ -32,7 +32,7 @@ export function Facility() {
   const location = data.locations.find((l) => l.location_id === active);
   const missionIds = new Set(
     data.missions
-      .filter((m) => configuration === "ALL" || m.scenario === configuration)
+      .filter((m) => configuration === "ALL" || m.configuration_version === configuration)
       .map((m) => m.mission_id),
   );
   const configuredActions = data.actions.filter((a) =>

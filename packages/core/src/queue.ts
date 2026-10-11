@@ -10,7 +10,7 @@ export function selectQueue(
     reviewedIds?: readonly string[];
     missionId?: string;
     query?: string;
-    scenarios?: ReadonlyMap<string, string | null>;
+    versions?: ReadonlyMap<string, string | null>;
   } = {},
 ): QueueItem[] {
   const {
@@ -19,7 +19,7 @@ export function selectQueue(
     reviewedIds = [],
     missionId,
     query = "",
-    scenarios,
+    versions,
   } = filter;
   const reviewed = new Set(reviewedIds);
   const needle = query.trim().toLowerCase();
@@ -27,7 +27,7 @@ export function selectQueue(
     if (missionId && item.mission_id !== missionId) return false;
     if (
       configuration !== "ALL" &&
-      scenarios?.get(item.mission_id) !== configuration
+      versions?.get(item.mission_id) !== configuration
     )
       return false;
     if (status === "required" && reviewed.has(item.id)) return false;

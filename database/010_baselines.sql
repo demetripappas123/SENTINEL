@@ -7,7 +7,9 @@
 --   asset        this asset's own good readings of this measurement
 --   cohort       this organization's assets of the same type
 --   engineering  a specified low and high for that type and measurement
--- No matching row means the baseline is insufficient and no finding is raised.
+-- No matching row means that stored baseline is insufficient.
+-- A good reading above the in-memory common-sense ceiling can still
+-- queue as a potential anomaly. That ceiling does not read these rows.
 -- The API still computes the asset fence in memory. These rows are the
 -- stored form of that ladder.
 

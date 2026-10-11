@@ -65,7 +65,9 @@ export function issueDescription(item: QueueItem) {
       ? "This inspection could not be completed. Review the affected check before retrying."
       : item.verdict === "unsupported_claim"
         ? "The available evidence is not sufficient to confirm an equipment problem."
-        : "An equipment reading needs attention. Compare it with the expected operating range.";
+        : item.verdict === "potential_anomaly"
+          ? "A good reading is above the limit for this equipment, and there is not enough history to confirm it."
+          : "An equipment reading needs attention. Compare it with the expected operating range.";
   return {
     ...description,
     summary: operatorText(description.summary, fallback),

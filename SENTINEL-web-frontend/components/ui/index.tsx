@@ -1,7 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import type { Configuration } from "@sentinel/core";
+import { configurationLabel, type Configuration } from "@sentinel/core";
 import { Badge } from "@/components/ui/badge";
 import { Button as ShadButton } from "@/components/ui/button";
 import {
@@ -109,8 +109,8 @@ export function ConfigurationControl({
 }) {
   const options: [Configuration, string, string][] = [
     ["ALL", "All runs", "All configurations"],
-    ["BASELINE", "V1", "Baseline configuration"],
-    ["IMPROVED", "V2", "Improved configuration"],
+    ["V1", "V1", configurationLabel("V1") + " configuration"],
+    ["V2", "V2", configurationLabel("V2") + " configuration"],
   ];
   return (
     <ToggleGroup

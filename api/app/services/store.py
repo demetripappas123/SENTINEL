@@ -285,7 +285,7 @@ def _asset_row(organization_id: str, row: Asset) -> tuple:
 
 def _mission_row(organization_id: str, row: Mission) -> tuple:
     return (
-        organization_id, row.source.value, row.mission_id, row.mission_name, row.scenario,
+        organization_id, row.source.value, row.mission_id, row.mission_name,
         row.configuration_version, row.start_time, row.end_time, row.duration_min,
         row.start_battery_pct, row.end_battery_pct, row.mission_status, row.operator_mode,
     )
@@ -295,7 +295,7 @@ def _action_row(organization_id: str, row: Action) -> tuple:
     return (
         organization_id, row.source.value, row.action_id, row.mission_id, row.sequence, row.timestamp,
         row.location_id, row.asset_id, row.action_type, row.battery_pct, row.status, row.failure_type,
-        row.duration_sec, row.scenario, row.configuration_version,
+        row.duration_sec, row.configuration_version,
     )
 
 
@@ -350,13 +350,12 @@ ON CONFLICT (source, asset_id) DO UPDATE SET
 
 _MISSION = """
 INSERT INTO sentinel.missions (
-    organization_id, source, mission_id, mission_name, scenario, configuration_version, start_time, end_time,
+    organization_id, source, mission_id, mission_name, configuration_version, start_time, end_time,
     duration_min, start_battery_pct, end_battery_pct, mission_status, operator_mode
-) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (source, mission_id) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     mission_name = EXCLUDED.mission_name,
-    scenario = EXCLUDED.scenario,
     configuration_version = EXCLUDED.configuration_version,
     start_time = EXCLUDED.start_time,
     end_time = EXCLUDED.end_time,
@@ -370,8 +369,8 @@ ON CONFLICT (source, mission_id) DO UPDATE SET
 _ACTION = """
 INSERT INTO sentinel.actions (
     organization_id, source, action_id, mission_id, sequence, timestamp, location_id, asset_id, action_type,
-    battery_pct, status, failure_type, duration_sec, scenario, configuration_version
-) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    battery_pct, status, failure_type, duration_sec, configuration_version
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (source, action_id) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     mission_id = EXCLUDED.mission_id,
@@ -384,7 +383,6 @@ ON CONFLICT (source, action_id) DO UPDATE SET
     status = EXCLUDED.status,
     failure_type = EXCLUDED.failure_type,
     duration_sec = EXCLUDED.duration_sec,
-    scenario = EXCLUDED.scenario,
     configuration_version = EXCLUDED.configuration_version
 """
 

@@ -59,7 +59,7 @@ export function Replay({
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
   const [mission, setMission] = useState(linked ? linked.mission_id : "");
   const missions = data.missions.filter(
-    (m) => configuration === "ALL" || m.scenario === configuration,
+    (m) => configuration === "ALL" || m.configuration_version === configuration,
   );
   const missionIds = new Set(
     (mission ? missions.filter((m) => m.mission_id === mission) : missions).map(

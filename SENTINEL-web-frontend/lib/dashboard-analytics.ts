@@ -23,7 +23,7 @@ export function getDashboardAnalytics(
 ) {
   const ids = new Set(
     data.missions
-      .filter((m) => configuration === "ALL" || m.scenario === configuration)
+      .filter((m) => configuration === "ALL" || m.configuration_version === configuration)
       .map((m) => m.mission_id),
   );
   const actions = data.actions.filter((a) => ids.has(a.mission_id));

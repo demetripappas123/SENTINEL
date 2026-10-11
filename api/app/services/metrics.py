@@ -31,7 +31,7 @@ def get_metrics(organization_id: str) -> OperationalMetrics:
 def _versions(conn, organization_id: str) -> list[VersionMetric]:
     mission_rows = conn.execute(
         """
-        SELECT source, configuration_version, scenario,
+        SELECT source, configuration_version,
                count(*) AS mission_count,
                count(*) FILTER (WHERE mission_status = 'COMPLETED') AS completed_missions,
                avg(duration_min) AS avg_duration_min,
@@ -39,38 +39,38 @@ def _versions(conn, organization_id: str) -> list[VersionMetric]:
                avg(end_battery_pct) AS avg_end_battery_pct
         FROM sentinel.missions
         WHERE organization_id = %s
-        GROUP BY source, configuration_version, scenario
+        GROUP BY source, configuration_version
         """,
         (organization_id,),
     ).fetchall()
     action_rows = conn.execute(
         """
-        SELECT source, configuration_version, scenario,
+        SELECT source, configuration_version,
                count(*) AS action_count,
                count(*) FILTER (WHERE status = 'SUCCESS') AS successful_actions
         FROM sentinel.actions
         WHERE organization_id = %s
-        GROUP BY source, configuration_version, scenario
+        GROUP BY source, configuration_version
         """,
         (organization_id,),
     ).fetchall()
     actions = {
-        (row["source"], row["configuration_version"], row["scenario"]): row
+        (row["source"], row["configuration_version"]): row
         for row in action_rows
     }
-    keys = {(row["source"], row["configuration_version"], row["scenario"]) for row in mission_rows}
+    keys = {(row["source"], row["configuration_version"]) for row in mission_rows}
     keys.update(actions)
     metrics: list[VersionMetric] = []
-    for source, version, scenario in sorted(keys, key=lambda key: (key[0], key[1] or "", key[2] or "")):
+    for source, version in sorted(keys, key=lambda key: (key[0], key[1] or "")):
         mission = next(
             (
                 row
                 for row in mission_rows
-                if (row["source"], row["configuration_version"], row["scenario"]) == (source, version, scenario)
+                if (row["source"], row["configuration_version"]) == (source, version)
             ),
             None,
         )
-        action = actions.get((source, version, scenario))
+        action = actions.get((source, version))
         mission_count = 0 if mission is None else mission["mission_count"]
         completed = 0 if mission is None else mission["completed_missions"]
         action_count = 0 if action is None else action["action_count"]
@@ -79,7 +79,6 @@ def _versions(conn, organization_id: str) -> list[VersionMetric]:
             VersionMetric(
                 source=source,
                 configuration_version=version,
-                scenario=scenario,
                 mission_count=mission_count,
                 completed_missions=completed,
                 mission_completion_pct=_pct(completed, mission_count),

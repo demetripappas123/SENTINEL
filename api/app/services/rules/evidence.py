@@ -4,22 +4,25 @@ The comparison ladder is:
 
 1. This asset's own good readings of the same measurement, once eight others exist.
 2. The organization's cohort of the same asset type. Not consulted yet.
-3. An engineering low and high. Not consulted yet.
-4. No defensible baseline, so a successful reading is not an equipment finding.
+3. An engineering low and high stored in anomaly_baselines. Not consulted yet.
+4. A common-sense ceiling for the asset type and measurement, applied here.
 
-Cohort and engineering limits belong in sentinel.anomaly_baselines. This module
-still computes the asset fence in memory. A decision is recorded either way.
+Cohort and engineering rows belong in sentinel.anomaly_baselines. This module
+still computes the asset fence in memory, and the ceiling in sanity.py.
+A reading above that ceiling is a potential anomaly, including when the
+asset does not yet have eight good readings. A decision is recorded either way.
 """
 from app.dtos.canonical import Action, AnomalyClaim, CanonicalBatch, Reading
 from app.dtos.queue import QueueItem, RuleDecision, RuleFiring, Verdict
+from app.services.rules.sanity import exceeds_sanity
 
-HOTSPOT_LOCATIONS = {"WP05", "WP09"}
-HOTSPOT_NAMES = {"pipe gallery", "turbine hall south"}
 MIN_PEER_READINGS = 8
-RULE_SET_VERSION = "evidence-v2"
+# evidence-v4 queues a good reading above a common-sense ceiling as a potential anomaly.
+RULE_SET_VERSION = "evidence-v4"
 VERDICT_BASE = {
     Verdict.inspection_failure: 100,
     Verdict.equipment_finding: 80,
+    Verdict.potential_anomaly: 50,
     Verdict.unsupported_claim: 20,
 }
 
@@ -30,8 +33,9 @@ def build_queue(batch: CanonicalBatch) -> list[QueueItem]:
     A failed action or a questionable reading is an inspection failure.
     A successful good reading is an equipment finding only when its value
     falls outside that asset's other good readings of the same measurement.
-    Any other anomaly label is an unsupported claim. A second failure on the
-    same asset raises rank.
+    A good reading above the common-sense ceiling is a potential anomaly
+    even without those readings. Any other anomaly label is an unsupported
+    claim. A second failure on the same asset raises rank.
     """
     items = [item for item, _ in score_batch(batch) if item is not None]
     items.sort(key=lambda item: (-item.rank, item.mission_id, item.action_id or ""))
@@ -46,7 +50,6 @@ def score_batch(batch: CanonicalBatch) -> list[tuple[QueueItem | None, RuleDecis
     """
     missions = {mission.mission_id: mission for mission in batch.missions}
     assets = {asset.asset_id: asset for asset in batch.assets}
-    locations = {location.location_id: location for location in batch.locations}
     readings_by_action: dict[str, list[Reading]] = {}
     claims_by_action: dict[str, list[AnomalyClaim]] = {}
     failures_by_asset: dict[str, list[Action]] = {}
@@ -73,7 +76,6 @@ def score_batch(batch: CanonicalBatch) -> list[tuple[QueueItem | None, RuleDecis
                 claims_by_action.get(action.action_id, []),
                 missions.get(action.mission_id),
                 assets.get(action.asset_id or ""),
-                locations.get(action.location_id or ""),
                 failures_by_asset.get(action.asset_id, []) if action.asset_id else [],
                 good_by_asset,
             )
@@ -82,15 +84,15 @@ def score_batch(batch: CanonicalBatch) -> list[tuple[QueueItem | None, RuleDecis
 
 
 # Verdict. Failed or questionable work is an inspection failure. A good reading
-# outside this asset's fence is an equipment finding. Any other anomaly label
-# is an unsupported claim.
+# outside this asset's fence is an equipment finding. A good reading above the
+# common-sense ceiling is a potential anomaly. Any other anomaly label is an
+# unsupported claim.
 def _item_for_action(
     action: Action,
     readings: list[Reading],
     claims: list[AnomalyClaim],
     mission,
     asset,
-    location,
     asset_failures: list[Action],
     good_by_asset: dict[tuple[str, str], list[Reading]],
 ) -> tuple[QueueItem | None, RuleDecision]:
@@ -100,6 +102,12 @@ def _item_for_action(
     verdict: Verdict | None
     cause = ""
     extreme: list[Reading] = []
+    asset_type = None if asset is None else asset.asset_type
+    sanity = [
+        reading
+        for reading in good_readings
+        if exceeds_sanity(reading.value, asset_type, reading.measurement_type)[0]
+    ]
     if failed:
         verdict = Verdict.inspection_failure
         cause = action.failure_type or ("QUESTIONABLE_READING" if questionable else action.status)
@@ -112,6 +120,9 @@ def _item_for_action(
         if extreme:
             verdict = Verdict.equipment_finding
             cause = extreme[0].measurement_type
+        elif sanity:
+            verdict = Verdict.potential_anomaly
+            cause = sanity[0].measurement_type
         elif claims:
             verdict = Verdict.unsupported_claim
             cause = claims[0].anomaly_type
@@ -137,6 +148,7 @@ def _item_for_action(
             threshold="QUESTIONABLE",
         ),
         _extreme_firing(action, good_readings, good_by_asset),
+        _sanity_firing(good_readings, asset_type),
         RuleFiring(
             rule_id="anomaly_claim",
             matched=bool(claims),
@@ -153,13 +165,27 @@ def _item_for_action(
         for failed_action in asset_failures
         if failed_action.action_id != action.action_id and failed_action.failure_type == action.failure_type
     ]
-    rank, rank_firings = _rank_firings(verdict, action, asset, location, len(other_failures), len(same_reason))
+    rank, rank_firings = _rank_firings(verdict, action, asset, len(other_failures), len(same_reason))
     firings.extend(rank_firings)
+    basis = extreme or sanity or good_readings
+    sanity_limit = None if not sanity else exceeds_sanity(sanity[0].value, asset_type, sanity[0].measurement_type)[1]
     item = QueueItem(
         id=f"{action.source.value}:{action.action_id}",
         verdict=verdict,
         cause=cause,
-        explanation=_explanation(verdict, cause, action, mission, claims, good_readings, extreme, len(other_failures)),
+        explanation=_explanation(
+            verdict,
+            cause,
+            action,
+            mission,
+            claims,
+            good_readings,
+            extreme,
+            sanity,
+            asset_type,
+            _other_count(sanity[0], action, good_by_asset) if sanity else 0,
+            len(other_failures),
+        ),
         mission_id=action.mission_id,
         action_id=action.action_id,
         asset_id=action.asset_id,
@@ -174,8 +200,10 @@ def _item_for_action(
             "claim_type": None if not claims else claims[0].anomaly_type,
             "other_failures_on_asset": len(other_failures),
             "same_failure_reason_on_asset": len(same_reason),
-            "measurement_type": None if not (extreme or good_readings) else (extreme or good_readings)[0].measurement_type,
-            "measurement_value": None if not (extreme or good_readings) else (extreme or good_readings)[0].value,
+            "measurement_type": None if not basis else basis[0].measurement_type,
+            "measurement_value": None if not basis else basis[0].value,
+            "asset_type": asset_type,
+            "sanity_limit": sanity_limit,
             "asset_criticality": None if asset is None else asset.criticality,
         },
     )
@@ -189,6 +217,10 @@ def _peers(reading: Reading, action: Action, good_by_asset: dict[tuple[str, str]
     if not asset_id:
         return []
     return good_by_asset.get((asset_id, reading.measurement_type), [])
+
+
+def _other_count(reading: Reading, action: Action, good_by_asset: dict[tuple[str, str], list[Reading]]) -> int:
+    return sum(1 for peer in _peers(reading, action, good_by_asset) if peer.reading_id != reading.reading_id)
 
 
 def _is_extreme(reading: Reading, peers: list[Reading]) -> bool:
@@ -257,6 +289,24 @@ def _extreme_firing(
     return fallback or RuleFiring(rule_id="extreme_reading", matched=False, threshold=str(MIN_PEER_READINGS))
 
 
+def _sanity_firing(good_readings: list[Reading], asset_type: str | None) -> RuleFiring:
+    fallback: RuleFiring | None = None
+    for reading in good_readings:
+        over, limit = exceeds_sanity(reading.value, asset_type, reading.measurement_type)
+        if limit is None:
+            continue
+        firing = RuleFiring(
+            rule_id="sanity_limit",
+            matched=over,
+            observed_value=format(reading.value, "g"),
+            threshold=format(limit, "g"),
+        )
+        if over:
+            return firing
+        fallback = fallback or firing
+    return fallback or RuleFiring(rule_id="sanity_limit", matched=False)
+
+
 def _decision(
     action: Action,
     queued: bool,
@@ -280,7 +330,6 @@ def _rank_firings(
     verdict: Verdict,
     action: Action,
     asset,
-    location,
     other_failures: int,
     same_reason: int,
 ) -> tuple[int, list[RuleFiring]]:
@@ -289,8 +338,6 @@ def _rank_firings(
     same_matched = action.status == "FAILED" and same_reason > 0
     below_40 = action.battery_pct is not None and action.battery_pct < 40
     below_20 = action.battery_pct is not None and action.battery_pct < 20
-    location_name = "" if location is None else location.location_name.casefold()
-    hotspot = action.location_id in HOTSPOT_LOCATIONS or location_name in HOTSPOT_NAMES
     critical = asset is not None and asset.criticality == "CRITICAL"
     battery = None if action.battery_pct is None else format(action.battery_pct, "g")
     firings = [
@@ -324,13 +371,6 @@ def _rank_firings(
             rank_delta=10 if below_20 else 0,
         ),
         RuleFiring(
-            rule_id="hotspot_location",
-            matched=hotspot,
-            observed_value=action.location_id,
-            threshold="WP05,WP09",
-            rank_delta=15 if hotspot else 0,
-        ),
-        RuleFiring(
             rule_id="critical_asset",
             matched=critical,
             observed_value=None if asset is None else asset.criticality,
@@ -350,6 +390,9 @@ def _explanation(
     claims: list[AnomalyClaim],
     good_readings: list[Reading],
     extreme: list[Reading],
+    sanity: list[Reading],
+    asset_type: str | None,
+    sanity_peers: int,
     other_failures: int,
 ) -> str:
     mission_status = None if mission is None else mission.mission_status
@@ -365,6 +408,23 @@ def _explanation(
         sentence = f"{reading.measurement_type} {reading.value:g} {reading.unit} is outside this asset's other good readings."
         if other_failures:
             sentence += f" This asset already has {other_failures} other failed action{'s' if other_failures != 1 else ''}."
+        return sentence
+    if verdict is Verdict.potential_anomaly:
+        reading = sanity[0]
+        limit = exceeds_sanity(reading.value, asset_type, reading.measurement_type)[1]
+        kind = asset_type or "equipment"
+        sentence = f"{reading.measurement_type} {reading.value:g} {reading.unit} on this {kind} is above {limit:g} {reading.unit}."
+        if sanity_peers < MIN_PEER_READINGS:
+            noun = "reading" if sanity_peers == 1 else "readings"
+            sentence += (
+                f" This asset has {sanity_peers} other good {reading.measurement_type} {noun}, "
+                "so this is a potential anomaly rather than a confirmed finding."
+            )
+        else:
+            sentence += (
+                " It still sits inside this asset's other good readings, so this is a potential "
+                "anomaly from the equipment limit rather than a confirmed finding."
+            )
         return sentence
     claim = claims[0].anomaly_type if claims else cause
     compared = good_readings[0] if good_readings else None

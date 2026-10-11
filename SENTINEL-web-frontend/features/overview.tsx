@@ -44,15 +44,15 @@ export function Overview() {
   const { reviewedIds } = useReviews();
   const metrics = getMetrics(data, configuration);
   const analytics = getDashboardAnalytics(data, configuration);
-  const scenarios = new Map(
-    data.missions.map((mission) => [mission.mission_id, mission.scenario]),
+  const versions = new Map(
+    data.missions.map((mission) => [mission.mission_id, mission.configuration_version]),
   );
-  const queued = selectQueue(queue, { configuration, reviewedIds, scenarios });
+  const queued = selectQueue(queue, { configuration, reviewedIds, versions });
   const inspectionFailures = queued.filter(
     (item) => item.verdict === "inspection_failure",
   ).length;
   const missions = data.missions.filter(
-    (m) => configuration === "ALL" || m.scenario === configuration,
+    (m) => configuration === "ALL" || m.configuration_version === configuration,
   );
   const ids = new Set(missions.map((m) => m.mission_id));
   const actions = data.actions.filter((a) => ids.has(a.mission_id));

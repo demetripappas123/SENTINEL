@@ -20,7 +20,6 @@ const orbit = {
       ...dataset.missions[0],
       mission_id: "orbit-run-1",
       mission_name: "Orbit: Boiler inspection",
-      scenario: null,
       configuration_version: null,
       start_time: "2026-10-10T12:00:00",
       end_time: null,
@@ -36,7 +35,7 @@ const orbit = {
       status: "FAILED",
       failure_type: "SENSOR_TIMEOUT",
       timestamp: "2026-10-10T12:01:00",
-      scenario: null,
+      configuration_version: null,
     },
   ],
 };

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  configurationLabel,
   humanize,
   missionActions,
   missionLabel,
@@ -101,18 +102,14 @@ export function MissionTable({
                 <td>
                   {full ? (
                     <Tag tone="blue">
-                      {m.configuration_version || m.scenario
+                      {m.configuration_version
                         ? operatorText(
                             pending(m.configuration_version),
                             "Not specified",
                           ) +
-                          " · " +
-                          (m.scenario
-                            ? operatorText(
-                                humanize(m.scenario),
-                                "Not specified",
-                              )
-                            : "—")
+                          (configurationLabel(m.configuration_version)
+                            ? " · " + configurationLabel(m.configuration_version)
+                            : "")
                         : "—"}
                     </Tag>
                   ) : actions.length === 0 ? (

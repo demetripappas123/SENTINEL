@@ -171,7 +171,6 @@ def _mission_replay(mission: Mission, actions: list[Action]) -> list[ReplayEvent
                 timestamp=started,
                 event_type="MISSION_STARTED",
                 details={
-                    "scenario": mission.scenario,
                     "configuration_version": mission.configuration_version,
                     "battery_pct": mission.start_battery_pct,
                 },

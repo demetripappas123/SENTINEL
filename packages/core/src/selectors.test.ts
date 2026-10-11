@@ -4,8 +4,8 @@ import { dataset, getFindings, getMetrics } from "./index";
 describe("operational metrics", () => {
   it.each([
     ["ALL", 96.3, 81.9, 27],
-    ["BASELINE", 94.4, 77.2, 18],
-    ["IMPROVED", 100, 91.1, 9],
+    ["V1", 94.4, 77.2, 18],
+    ["V2", 100, 91.1, 9],
   ] as const)(
     "keeps completion distinct from action success for %s",
     (configuration, completion, success, missions) => {
@@ -71,7 +71,7 @@ describe("finding triage", () => {
   it("limits findings to the selected mission and configuration", () => {
     const findings = getFindings(dataset, {
       status: "all",
-      configuration: "BASELINE",
+      configuration: "V1",
       missionId: "M015",
     });
     expect(findings.length).toBeGreaterThan(0);
@@ -79,7 +79,7 @@ describe("finding triage", () => {
     expect(
       getFindings(dataset, {
         status: "all",
-        configuration: "IMPROVED",
+        configuration: "V2",
         missionId: "M015",
       }),
     ).toEqual([]);

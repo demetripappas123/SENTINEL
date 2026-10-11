@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 class Verdict(str, Enum):
     inspection_failure = "inspection_failure"
     equipment_finding = "equipment_finding"
+    potential_anomaly = "potential_anomaly"
     unsupported_claim = "unsupported_claim"
 
 

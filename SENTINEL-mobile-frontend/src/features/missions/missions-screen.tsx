@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import {
+  configurationLabel,
   humanize,
   selectMissionActions,
   type Configuration,
@@ -36,7 +37,7 @@ export function MissionsScreen({
   const { data } = useScreenData();
   const [configuration, setConfiguration] = useState<Configuration>("ALL");
   const missions = data.missions.filter(
-    (m) => configuration === "ALL" || m.scenario === configuration,
+    (m) => configuration === "ALL" || m.configuration_version === configuration,
   );
   const ids = new Set(missions.map((m) => m.mission_id));
   const scoped = {
@@ -70,8 +71,8 @@ export function MissionsScreen({
         <SegmentedControl
           options={[
             { value: "ALL", label: "All" },
-            { value: "BASELINE", label: "Baseline" },
-            { value: "IMPROVED", label: "Improved" },
+            { value: "V1", label: configurationLabel("V1") ?? "V1" },
+            { value: "V2", label: configurationLabel("V2") ?? "V2" },
           ]}
           value={configuration}
           colors={colors}

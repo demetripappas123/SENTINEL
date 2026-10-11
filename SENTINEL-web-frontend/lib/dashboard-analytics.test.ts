@@ -8,13 +8,13 @@ const sample = {
     {
       ...dataset.missions[0],
       mission_id: "b",
-      scenario: "BASELINE",
+      configuration_version: "V1",
       start_time: "2026-09-02T10:00:00Z",
     },
     {
       ...dataset.missions[0],
       mission_id: "i",
-      scenario: "IMPROVED",
+      configuration_version: "V2",
       start_time: "2026-09-01T10:00:00Z",
     },
   ],
@@ -62,7 +62,7 @@ it("orders daily results and calculates rates only from recorded outcomes", () =
 });
 
 it("applies the same configuration filter to all analytics", () => {
-  expect(getDashboardAnalytics(sample, "IMPROVED")).toMatchObject({
+  expect(getDashboardAnalytics(sample, "V2")).toMatchObject({
     passed: 1,
     failed: 0,
     awaiting: 1,
@@ -122,7 +122,7 @@ it("traces failures to their location and cause without counting planned checks"
       failure_type: "SENSOR_TIMEOUT",
     },
   ];
-  const result = getDashboardAnalytics({ ...sample, actions }, "BASELINE");
+  const result = getDashboardAnalytics({ ...sample, actions }, "V1");
   expect(result.causes).toEqual([
     { cause: "SENSOR_TIMEOUT", count: 1, share: 100 },
   ]);

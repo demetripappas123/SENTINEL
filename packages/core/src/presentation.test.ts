@@ -37,6 +37,7 @@ it.each([
   ["visualInspection", "Visual inspection"],
   ["LOCALIZATION_CONFIDENCE_PCT", "Position confidence"],
   ["unsupported_claim", "Finding needs verification"],
+  ["potential_anomaly", "Potential anomaly"],
   ["FUTURE_SENSOR_CONDITION", "Future sensor condition"],
 ])("makes source label %s readable", (value, want) =>
   expect(humanize(value)).toBe(want),

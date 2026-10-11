@@ -6,6 +6,7 @@ const labels: Record<string, string> = {
   QUESTIONABLE: "Needs verification",
   UNSUPPORTED_CLAIM: "Finding needs verification",
   EQUIPMENT_FINDING: "Equipment finding",
+  POTENTIAL_ANOMALY: "Potential anomaly",
   LOCALIZATION_CONFIDENCE_PCT: "Position confidence",
   TEMPERATURE_C: "Temperature",
   PRESSURE_PSI: "Pressure",
@@ -14,6 +15,12 @@ const labels: Record<string, string> = {
   ACOUSTIC_DB: "Sound level",
   VISUAL_SCORE: "Visual condition score",
 };
+
+export function configurationLabel(version: string | null | undefined): string | null {
+  if (version === "V1") return "Baseline";
+  if (version === "V2") return "Improved";
+  return null;
+}
 
 export function formatLabel(value: string): string {
   const words = value.trim().replace(/([a-z\d])([A-Z])/g, "$1_$2");
@@ -135,6 +142,10 @@ export function describeQueueItem(item: QueueItem) {
       formatFindingDescription(item.explanation);
     nextStep =
       "Review the evidence and collect a reliable measurement before deciding whether maintenance is needed.";
+  } else if (item.verdict === "potential_anomaly") {
+    summary = formatFindingDescription(item.explanation);
+    nextStep =
+      "Treat this as a possible equipment problem. Collect more good readings on this asset before confirming it.";
   } else {
     summary = formatFindingDescription(item.explanation);
     nextStep =
