@@ -5,9 +5,9 @@ from app.schemas.queue import QueueItem, QueueUpdate
 from app.services.store import load_queue
 
 
-def get_queue() -> list[QueueItem]:
+def get_queue(organization_id: str) -> list[QueueItem]:
     with connect() as conn:
-        return load_queue(conn)
+        return load_queue(conn, organization_id)
 
 
 def queue_updates(existing: CanonicalBatch, incoming: CanonicalBatch) -> QueueUpdate:

@@ -54,3 +54,9 @@ it("shows findings linked to the selected mission action", async () => {
   await fireEvent.press(screen.getByRole("button", { name: /A0146/ }));
   expect(screen.queryByText("Signal degradation detected.")).toBeNull();
 });
+
+it("shows sign in before the operator console when there is no session", async () => {
+  await render(<App requireAuth />);
+  expect(await screen.findByRole("header", { name: "Sign in" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Attention tab/ })).toBeNull();
+});

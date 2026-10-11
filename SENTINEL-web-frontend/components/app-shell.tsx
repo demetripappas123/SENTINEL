@@ -3,15 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  Building2,
   History,
   LayoutDashboard,
   Map,
   Moon,
+  Plug,
   Route,
   Sun,
   TriangleAlert,
+  User,
+  Webhook,
 } from "lucide-react";
 import { selectQueue } from "@sentinel/core";
 import { useReviews, useTheme } from "../lib/browser-state";
@@ -39,25 +43,50 @@ const navigation = [
   { href: "/review", label: "Review", icon: TriangleAlert },
   { href: "/facility", label: "Facility", icon: Map },
   { href: "/replay", label: "Replay", icon: History },
+  { href: "/orbit", label: "Orbit", icon: Webhook, metric: false, trailing: Plug },
+  { href: "/settings/user", label: "User", icon: User, metric: false },
+  { href: "/settings/organization", label: "Organization", icon: Building2, metric: false },
 ];
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
+  const signedOut = path === "/login";
   const data = useInspectionData();
   const queue = useQueue();
   const inspectionState = useInspectionState();
   const queueState = useQueueState();
   const requests =
-    path === "/" ||
-    path.startsWith("/review") ||
-    path.startsWith("/missions")
-      ? [inspectionState, queueState]
-      : [inspectionState];
+    path.startsWith("/orbit") || path.startsWith("/settings")
+      ? []
+      : path === "/" ||
+          path.startsWith("/review") ||
+          path.startsWith("/missions")
+        ? [inspectionState, queueState]
+        : [inspectionState];
   const { reviewedIds } = useReviews();
   const { theme, toggleTheme } = useTheme();
+  const signOutDialog = useRef<HTMLDialogElement>(null);
+  const [organizationName, setOrganizationName] = useState("");
+  const [userName, setUserName] = useState("");
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
+  useEffect(() => {
+    if (signedOut) return;
+    let active = true;
+    void fetch("/api/auth/session")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (!active || !body) return;
+        if (typeof body.organization?.name === "string") setOrganizationName(body.organization.name);
+        if (typeof body.user?.name === "string") setUserName(body.user.name);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [signedOut]);
+  if (signedOut) return children;
   const counts: Record<string, number | undefined> = {
     "/missions": data.missions.length,
     "/review": selectQueue(queue, { reviewedIds }).length,
@@ -67,10 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="app-frame grid h-dvh grid-cols-[212px_minmax(0,1fr)] grid-rows-[52px_minmax(0,1fr)] overflow-hidden bg-background text-foreground">
       <header className="col-span-2 flex items-center gap-4 border-b px-5">
-        <Link
-          className="flex items-center gap-2 text-base font-semibold tracking-wide"
-          href="/"
-        >
+        <Link className="flex items-center gap-2" href="/">
           <Image
             src="/logo.png"
             alt=""
@@ -78,10 +104,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             height={24}
             className="dark:invert"
           />
-          SENTINEL
+          <span className="flex flex-col">
+            <span className="text-base font-semibold leading-none tracking-wide">
+              SENTINEL
+            </span>
+            <span className="mt-1 text-[10px] font-normal leading-none text-muted-foreground">
+              Version 0.1 Alpha
+            </span>
+          </span>
         </Link>
-        <span className="h-5 border-l" />
-        <span className="text-xs text-muted-foreground">NextEra / SPOT</span>
         <span className="flex-1" />
         <Tag>Synthetic data</Tag>
         <AssistantButton />
@@ -98,9 +129,19 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sun className="size-4" />
           )}
         </Button>
-        <span className="grid size-7 place-items-center rounded-full border text-[10px]">
+        <Button
+          className="quiet"
+          onClick={() => signOutDialog.current?.showModal()}
+        >
+          Sign out
+        </Button>
+        <Link
+          href="/settings/user"
+          aria-label="User settings"
+          className="grid size-7 place-items-center rounded-full border text-[10px]"
+        >
           OP
-        </span>
+        </Link>
       </header>
       <aside className="flex flex-col border-r bg-sidebar p-3 text-sidebar-foreground">
         <div className="mb-6 flex items-center gap-2.5 px-2">
@@ -111,15 +152,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             height={22}
             className="dark:invert"
           />
-          <div>
-            <strong className="block text-xs">SPOT Operations</strong>
-            <small className="text-[10px] text-muted-foreground">
-              NextEra Energy
+          <div className="leading-none">
+            <strong className="block text-xs leading-none">{organizationName || "Organization"}</strong>
+            <small className="mt-0.5 block text-[10px] leading-none text-muted-foreground">
+              {userName}
             </small>
           </div>
         </div>
         <nav className="flex flex-col gap-1" aria-label="Workspace">
-          {navigation.map(({ href, label, icon: Icon }) => {
+          {navigation.map((item) => {
+            const { href, label, icon: Icon } = item;
+            const Trailing = "trailing" in item ? item.trailing : undefined;
             const active = href === "/" ? path === "/" : path.startsWith(href);
             return (
               <Link
@@ -134,13 +177,17 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 <Icon className="size-4" />
                 <span>{label}</span>
-                <span className="ml-auto font-mono text-[10px]">
-                  {(href === "/review"
-                    ? queueState.status
-                    : inspectionState.status) === "ready"
-                    ? counts[href]
-                    : "—"}
-                </span>
+                {Trailing ? (
+                  <Trailing className="nav-trailing ml-auto size-3.5" aria-hidden />
+                ) : "metric" in item && item.metric === false ? null : (
+                  <span className="ml-auto font-mono text-[10px]">
+                    {(href === "/review"
+                      ? queueState.status
+                      : inspectionState.status) === "ready"
+                      ? counts[href]
+                      : "—"}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -163,6 +210,32 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main id="main" className="relative min-h-0 overflow-auto p-6">
         <DataBoundary requests={requests}>{children}</DataBoundary>
       </main>
+      <dialog
+        ref={signOutDialog}
+        aria-labelledby="sign-out-title"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) signOutDialog.current?.close();
+        }}
+      >
+        <header className="dialog-head">
+          <h2 id="sign-out-title">Sign out</h2>
+        </header>
+        <div className="dialog-content">
+          <p>Are you sure?</p>
+        </div>
+        <footer className="dialog-foot">
+          <Button onClick={() => signOutDialog.current?.close()}>Cancel</Button>
+          <Button
+            onClick={() => {
+              void fetch("/api/auth/logout", { method: "POST" }).then(() => {
+                window.location.href = "/login";
+              });
+            }}
+          >
+            Sign out
+          </Button>
+        </footer>
+      </dialog>
     </div>
   );
 }

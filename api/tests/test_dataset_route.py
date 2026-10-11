@@ -10,12 +10,20 @@ from app.schemas.dataset import AssetOut, InspectionDataset
 client = TestClient(app)
 
 
+def _north():
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "operator.north@sentinel.local", "password": "sentinel"},
+    )
+    return {"Authorization": "Bearer " + response.json()["token"]}
+
+
 @pytest.fixture
 def served(monkeypatch):
-    calls: list[Source] = []
+    calls: list[tuple[Source, str]] = []
 
-    def fake(source: Source) -> InspectionDataset:
-        calls.append(source)
+    def fake(source: Source, organization_id: str, detail: bool = True) -> InspectionDataset:
+        calls.append((source, organization_id))
         return InspectionDataset(
             assets=[AssetOut(asset_id="HX-201", asset_name="Heat Exchanger 01", asset_type="Heat Exchanger", location_id="WP05", criticality="LOW")]
         )
@@ -25,24 +33,24 @@ def served(monkeypatch):
 
 
 def test_dataset_defaults_to_kit(served):
-    response = client.get("/dataset")
+    response = client.get("/dataset", headers=_north())
     assert response.status_code == 200
     assert response.json()["assets"][0]["asset_id"] == "HX-201"
     assert response.json()["events"] == []
-    assert served == [Source.kit]
+    assert served == [(Source.kit, "org_north")]
 
 
 def test_dataset_rejects_unknown_source(served):
-    assert client.get("/dataset?source=bogus").status_code == 422
+    assert client.get("/dataset?source=bogus", headers=_north()).status_code == 422
     assert served == []
 
 
 def test_dataset_reports_unavailable_database(monkeypatch):
-    def down(source: Source) -> InspectionDataset:
+    def down(source: Source, organization_id: str, detail: bool = True) -> InspectionDataset:
         raise psycopg.OperationalError("connection refused")
 
     monkeypatch.setattr(dataset_router, "get_dataset", down)
-    response = client.get("/dataset")
+    response = client.get("/dataset", headers=_north())
     assert response.status_code == 503
     assert response.json() == {"detail": "Database is unavailable"}
 
@@ -71,8 +79,8 @@ def test_orbit_route_preserves_partial_records_for_the_web_dashboard(monkeypatch
             "failureType": "SENSOR_TIMEOUT", "time": "2026-10-10T12:01:00Z",
         }],
     })
-    monkeypatch.setattr(dataset_router, "get_dataset", lambda source: to_dataset(batch))
-    response = client.get("/dataset?source=orbit")
+    monkeypatch.setattr(dataset_router, "get_dataset", lambda source, organization_id, detail=True: to_dataset(batch))
+    response = client.get("/dataset?source=orbit", headers=_north())
     assert response.status_code == 200
     data = response.json()
     assert data["missions"][0]["end_time"] is None

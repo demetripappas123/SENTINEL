@@ -11,13 +11,13 @@ from app.schemas.metrics import (
 BATTERY_BINS = ((0, 20), (20, 40), (40, 60), (60, 80), (80, 100))
 
 
-def get_metrics() -> OperationalMetrics:
+def get_metrics(organization_id: str) -> OperationalMetrics:
     with connect() as conn:
-        versions = _versions(conn)
-        inspections = _inspections(conn)
-        locations = _locations(conn)
-        battery = _battery(conn)
-        missions = _missions(conn)
+        versions = _versions(conn, organization_id)
+        inspections = _inspections(conn, organization_id)
+        locations = _locations(conn, organization_id)
+        battery = _battery(conn, organization_id)
+        missions = _missions(conn, organization_id)
     return OperationalMetrics(
         versions=versions,
         inspections=inspections,
@@ -27,7 +27,7 @@ def get_metrics() -> OperationalMetrics:
     )
 
 
-def _versions(conn) -> list[VersionMetric]:
+def _versions(conn, organization_id: str) -> list[VersionMetric]:
     mission_rows = conn.execute(
         """
         SELECT source, configuration_version, scenario,
@@ -37,8 +37,10 @@ def _versions(conn) -> list[VersionMetric]:
                avg(start_battery_pct) AS avg_start_battery_pct,
                avg(end_battery_pct) AS avg_end_battery_pct
         FROM sentinel.missions
+        WHERE organization_id = %s
         GROUP BY source, configuration_version, scenario
-        """
+        """,
+        (organization_id,),
     ).fetchall()
     action_rows = conn.execute(
         """
@@ -46,8 +48,10 @@ def _versions(conn) -> list[VersionMetric]:
                count(*) AS action_count,
                count(*) FILTER (WHERE status = 'SUCCESS') AS successful_actions
         FROM sentinel.actions
+        WHERE organization_id = %s
         GROUP BY source, configuration_version, scenario
-        """
+        """,
+        (organization_id,),
     ).fetchall()
     actions = {
         (row["source"], row["configuration_version"], row["scenario"]): row
@@ -89,16 +93,18 @@ def _versions(conn) -> list[VersionMetric]:
     return metrics
 
 
-def _inspections(conn) -> list[InspectionMetric]:
+def _inspections(conn, organization_id: str) -> list[InspectionMetric]:
     rows = conn.execute(
         """
         SELECT source, action_type, configuration_version,
                count(*) AS action_count,
                count(*) FILTER (WHERE status = 'SUCCESS') AS successful_actions
         FROM sentinel.actions
+        WHERE organization_id = %s
         GROUP BY source, action_type, configuration_version
         ORDER BY action_type, configuration_version, source
-        """
+        """,
+        (organization_id,),
     ).fetchall()
     return [
         InspectionMetric(
@@ -113,7 +119,7 @@ def _inspections(conn) -> list[InspectionMetric]:
     ]
 
 
-def _locations(conn) -> list[LocationMetric]:
+def _locations(conn, organization_id: str) -> list[LocationMetric]:
     rows = conn.execute(
         """
         SELECT l.source, l.location_id, l.location_name,
@@ -125,10 +131,14 @@ def _locations(conn) -> list[LocationMetric]:
                ) AS navigation_failures
         FROM sentinel.locations l
         LEFT JOIN sentinel.actions a
-          ON a.source = l.source AND a.location_id = l.location_id
+          ON a.organization_id = l.organization_id
+         AND a.source = l.source
+         AND a.location_id = l.location_id
+        WHERE l.organization_id = %s
         GROUP BY l.source, l.location_id, l.location_name
         ORDER BY l.location_id
-        """
+        """,
+        (organization_id,),
     ).fetchall()
     return [
         LocationMetric(
@@ -146,7 +156,7 @@ def _locations(conn) -> list[LocationMetric]:
     ]
 
 
-def _battery(conn) -> list[BatteryMetric]:
+def _battery(conn, organization_id: str) -> list[BatteryMetric]:
     rows = conn.execute(
         """
         SELECT
@@ -160,9 +170,11 @@ def _battery(conn) -> list[BatteryMetric]:
             count(*) AS action_count,
             count(*) FILTER (WHERE status = 'SUCCESS') AS successful_actions
         FROM sentinel.actions
-        WHERE battery_pct IS NOT NULL
+        WHERE organization_id = %s
+          AND battery_pct IS NOT NULL
         GROUP BY 1
-        """
+        """,
+        (organization_id,),
     ).fetchall()
     found = {row["low_pct"]: row for row in rows}
     return [
@@ -179,31 +191,39 @@ def _battery(conn) -> list[BatteryMetric]:
     ]
 
 
-def _missions(conn) -> MissionMetric:
+def _missions(conn, organization_id: str) -> MissionMetric:
     summary = conn.execute(
         """
         SELECT
             count(*) AS mission_count,
             count(*) FILTER (WHERE mission_status = 'COMPLETED') AS completed_count
         FROM sentinel.missions
-        """
+        WHERE organization_id = %s
+        """,
+        (organization_id,),
     ).fetchone()
     failed = conn.execute(
         """
         SELECT mission_id
         FROM sentinel.missions
-        WHERE mission_status = 'FAILED'
+        WHERE organization_id = %s AND mission_status = 'FAILED'
         ORDER BY mission_id
-        """
+        """,
+        (organization_id,),
     ).fetchall()
     with_failures = conn.execute(
         """
         SELECT count(DISTINCT m.mission_id) AS n
         FROM sentinel.missions m
         JOIN sentinel.actions a
-          ON a.source = m.source AND a.mission_id = m.mission_id
-        WHERE m.mission_status = 'COMPLETED' AND a.status = 'FAILED'
-        """
+          ON a.organization_id = m.organization_id
+         AND a.source = m.source
+         AND a.mission_id = m.mission_id
+        WHERE m.organization_id = %s
+          AND m.mission_status = 'COMPLETED'
+          AND a.status = 'FAILED'
+        """,
+        (organization_id,),
     ).fetchone()
     return MissionMetric(
         mission_count=summary["mission_count"],

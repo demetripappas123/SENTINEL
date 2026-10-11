@@ -20,6 +20,7 @@ export function useApiResource<T>(
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (initial !== undefined) return;
+    if (window.location.pathname === "/login") return;
     const controller = new AbortController();
     let cancelled = false;
     const timeout = setTimeout(() => controller.abort(), 15_000);

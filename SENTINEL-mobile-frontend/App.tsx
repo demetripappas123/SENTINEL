@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Keyboard,
   Linking,
@@ -49,6 +49,8 @@ import { useReducedMotion } from "./src/design/motion";
 import type { EvidenceSelection, Tab } from "./src/navigation";
 import { parseAppLink } from "./src/navigation";
 import { Button } from "./src/ui";
+import { LoginScreen, type MobileSession } from "./src/features/login-screen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 // With an API URL the app shows only backend data, never the bundled fixture.
@@ -60,9 +62,11 @@ const defaultRepository = apiUrl
 export default function App({
   repository = defaultRepository,
   reviewStore,
+  requireAuth = process.env.JEST_WORKER_ID == null,
 }: {
   repository?: InspectionRepository;
   reviewStore?: ReviewStore;
+  requireAuth?: boolean;
 }) {
   const deviceStore = useMemo(
     () => createDeviceReviewStore(repository.namespace),
@@ -79,16 +83,69 @@ export default function App({
         }
       >
         <BottomSheetModalProvider>
-          <InspectionProvider
-            repository={repository}
-            reviewStore={reviewStore || deviceStore}
-          >
-            <AppShell />
-          </InspectionProvider>
+          <SessionGate requireAuth={requireAuth}>
+            <InspectionProvider
+              repository={repository}
+              reviewStore={reviewStore || deviceStore}
+            >
+              <AppShell />
+            </InspectionProvider>
+          </SessionGate>
         </BottomSheetModalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+const SESSION_KEY = "sentinel.session";
+const authApiUrl = process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+function SessionGate({
+  requireAuth,
+  children,
+}: {
+  requireAuth: boolean;
+  children: ReactNode;
+}) {
+  const [session, setSession] = useState<MobileSession | null | undefined>(
+    requireAuth ? undefined : null,
+  );
+  useEffect(() => {
+    if (!requireAuth) return;
+    let active = true;
+    AsyncStorage.getItem(SESSION_KEY)
+      .then(async (stored) => {
+        if (!stored) return null;
+        const saved = JSON.parse(stored) as MobileSession;
+        const response = await fetch(authApiUrl + "/api/auth/session", {
+          headers: { Authorization: "Bearer " + saved.token },
+        });
+        return response.ok ? saved : null;
+      })
+      .then((next) => {
+        if (active) setSession(next);
+      })
+      .catch(() => {
+        if (active) setSession(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [requireAuth]);
+  if (!requireAuth) return children;
+  if (session === undefined) return null;
+  if (!session) {
+    return (
+      <LoginScreen
+        colors={themes.light}
+        onSignedIn={(next) => {
+          void AsyncStorage.setItem(SESSION_KEY, JSON.stringify(next));
+          setSession(next);
+        }}
+      />
+    );
+  }
+  return children;
 }
 
 function AppShell() {

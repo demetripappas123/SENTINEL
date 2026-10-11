@@ -3,3 +3,4 @@ uvicorn[standard]>=0.32
 python-dotenv>=1.0
 psycopg[binary]>=3.2
 databricks-sdk>=0.36
+httpx2>=2.13.1

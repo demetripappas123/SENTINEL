@@ -38,35 +38,35 @@ def _tables(detail: bool) -> dict[str, tuple[str, type]]:
     return {key: value for key, value in _TABLES.items() if key != "readings"}
 
 
-def _load(conn, source: Source | None, detail: bool) -> dict:
+def _load(conn, organization_id: str, source: Source | None, detail: bool) -> dict:
     loaded: dict = {}
     for field, (table, model) in _tables(detail).items():
-        statement = f"SELECT * FROM sentinel.{table}"
-        params = ()
+        statement = f"SELECT * FROM sentinel.{table} WHERE organization_id = %s"
+        params: list[str] = [organization_id]
         if source is not None:
-            statement += " WHERE source = %s"
-            params = (source.value,)
-        loaded[field] = [model.model_validate(row) for row in conn.execute(statement, params).fetchall()]
+            statement += " AND source = %s"
+            params.append(source.value)
+        loaded[field] = [model.model_validate(row) for row in conn.execute(statement, tuple(params)).fetchall()]
     if not detail:
         loaded["readings"] = []
     return loaded
 
 
-def get_dataset(source: Source, *, detail: bool = True) -> InspectionDataset:
-    """Canonical records for one source, in the frontend's shape.
+def get_dataset(source: Source, organization_id: str, *, detail: bool = True) -> InspectionDataset:
+    """Canonical records for one organization and source, in the frontend's shape.
 
     The shell omits readings and derived replay. Those are the heavy parts
     and are only needed after the counts and lists are on screen.
     """
     with connect() as conn:
-        loaded = _load(conn, source, detail)
+        loaded = _load(conn, organization_id, source, detail)
     return to_dataset(CanonicalBatch(**loaded), include_events=detail)
 
 
-def get_live_dataset(*, detail: bool = True) -> InspectionDataset:
-    """Every source in one connection. Same shell/detail split as get_dataset."""
+def get_live_dataset(organization_id: str, *, detail: bool = True) -> InspectionDataset:
+    """Every source for one organization. Same shell/detail split as get_dataset."""
     with connect() as conn:
-        loaded = _load(conn, None, detail)
+        loaded = _load(conn, organization_id, None, detail)
     return to_dataset(CanonicalBatch(**loaded), include_events=detail)
 
 
