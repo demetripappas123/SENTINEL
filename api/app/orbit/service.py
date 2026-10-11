@@ -1,5 +1,7 @@
-"""Connect an organization to one webhook and accept a signed delivery.
+"""Connect an organization once and accept a signed delivery.
 
+An organization has one Orbit connection. That connection currently carries one
+webhook subscription. More subscriptions can hang off the same connection later.
 A second connection for the same organization is rejected. A delivery is stored,
 then the payload is ingested as that organization's data.
 """
@@ -32,13 +34,13 @@ def connect_organization(
     body: ConnectRequest,
     organization: Organization,
 ) -> ConnectionView:
-    """Attach a simulated Orbit webhook to an organization that already exists."""
+    """Open the one simulated Orbit connection for an organization that already exists."""
     if not body.event_types:
         raise OrbitRequestError(422, "Choose at least one event type")
     if any(event_type != "ACTION_COMPLETED" for event_type in body.event_types):
         raise OrbitRequestError(422, "Simulated Orbit currently accepts ACTION_COMPLETED")
     if any(row.organization.id == organization.id for row in catalog.connections()):
-        raise OrbitRequestError(409, "This organization already has a webhook subscription")
+        raise OrbitRequestError(409, "This organization already has an Orbit connection")
     facility = Facility(id=_new_id("fac"), organization_id=organization.id, name=body.facility_name.strip())
     integration = OrbitIntegration(
         id=_new_id("int"),

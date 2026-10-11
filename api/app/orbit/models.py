@@ -1,4 +1,4 @@
-"""The Orbit webhook contract: a connection, a subscription, and one delivery."""
+"""An Orbit connection: the organization link, its current subscription, and one delivery."""
 from pydantic import BaseModel, ConfigDict, Field
 
 

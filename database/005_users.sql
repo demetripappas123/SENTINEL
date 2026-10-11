@@ -1,4 +1,4 @@
--- People who sign in. The organization owns the Orbit webhook, not the user.
+-- People who sign in. The organization has one Orbit connection, not the user.
 -- Run this in the Lakebase SQL editor after 004_orbit_connections.sql.
 -- Seeded operators use the password sentinel. Replace these rows before any shared deployment.
 

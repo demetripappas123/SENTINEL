@@ -102,7 +102,8 @@ it("distinguishes a successfully fetched empty dataset from a loading state", as
   ).not.toBeInTheDocument();
 });
 
-it("opens and closes the future assistant without pretending it can respond", async () => {
+it("opens and closes the side chat without pretending it can respond", async () => {
+  localStorage.removeItem("sentinel:chat-open");
   render(
     <InspectionDataProvider initial={dataset}>
       <QueueProvider initial={[]}>
@@ -112,13 +113,13 @@ it("opens and closes the future assistant without pretending it can respond", as
       </QueueProvider>
     </InspectionDataProvider>,
   );
+  expect(screen.queryByRole("complementary", { name: "Chat" })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "AI assistant" }));
-  const dialog = screen.getByRole("dialog", { name: "AI assistant" });
-  expect(within(dialog).getByText(/coming soon/i)).toBeInTheDocument();
-  await userEvent.click(
-    within(dialog).getByRole("button", { name: "Close assistant" }),
-  );
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  const chat = screen.getByRole("complementary", { name: "Chat" });
+  expect(within(chat).getByText(/isn't connected yet/i)).toBeInTheDocument();
+  expect(screen.getByRole("main")).toBeInTheDocument();
+  await userEvent.click(within(chat).getByRole("button", { name: "Close chat" }));
+  expect(screen.queryByRole("complementary", { name: "Chat" })).not.toBeInTheDocument();
 });
 
 it("picks up new results in the background without returning to loading", async () => {

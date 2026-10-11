@@ -64,7 +64,7 @@ export function LoginScreen({
       <Text style={{ color: colors.mutedForeground, marginTop: 8, marginBottom: 16 }}>
         {mode === "join"
           ? "Create an account on an organization that already exists."
-          : "The signed-in user belongs to one organization. That organization owns the Orbit webhook."}
+          : "The signed-in user belongs to one organization. That organization has one Orbit connection."}
       </Text>
       {mode === "sign-in" ? null : (
         <>

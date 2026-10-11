@@ -1108,11 +1108,19 @@ dialog {
   border: 1px solid var(--border);
   border-radius: 4px;
   width: min(560px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100dvh - 48px);
+  margin: auto;
   color: var(--foreground);
   background: var(--card);
-  max-height: calc(100dvh - 48px);
   overflow: auto;
   box-shadow: 0 20px 60px #11141840;
+}
+dialog:modal {
+  position: fixed;
+  inset: 0;
+  height: fit-content;
+  margin: auto;
 }
 dialog::backdrop {
   background: #11141899;
@@ -1677,9 +1685,119 @@ dialog::backdrop {
   overflow-wrap: anywhere;
   min-width: 0;
 }
+.app-frame {
+  grid-template-columns: 212px minmax(0, 1fr) var(--chat-width, 0px);
+}
+.side-chat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--border);
+  background: var(--background);
+}
+.side-chat[hidden] {
+  display: none !important;
+}
+.side-chat-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  z-index: 2;
+  width: 6px;
+  cursor: col-resize;
+}
+.side-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 6px 8px 6px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.side-chat-head h2 {
+  margin-right: auto;
+  font-size: 13px;
+  font-weight: 600;
+}
+.side-chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  direction: ltr;
+  scrollbar-gutter: stable;
+}
+.side-chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%;
+  padding: 16px;
+}
+.side-chat-empty {
+  margin: auto;
+  max-width: 28ch;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.side-chat-bubble {
+  max-width: 90%;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.side-chat-bubble.user {
+  align-self: flex-end;
+  background: var(--muted);
+}
+.side-chat-bubble.assistant {
+  align-self: flex-start;
+  border: 1px solid var(--border);
+}
+.side-chat-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px;
+  background: var(--card);
+}
+.side-chat-composer textarea {
+  flex: 1;
+  min-height: 24px;
+  max-height: 160px;
+  resize: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.4;
+}
+@media (max-width: 800px) {
+  .app-frame.chat-open .side-chat {
+    position: fixed;
+    top: 52px;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    width: min(420px, 100vw);
+    box-shadow: -12px 0 40px #11141833;
+  }
+}
 @media (max-width: 1100px) {
   .app-frame {
-    grid-template-columns: 172px minmax(0, 1fr);
+    grid-template-columns: 172px minmax(0, 1fr) var(--chat-width, 0px);
   }
   .analytics-grid {
     grid-template-columns: minmax(0, 1.3fr) minmax(230px, 1fr);
@@ -1695,10 +1813,10 @@ dialog::backdrop {
   .app-frame {
     grid-template-columns: 58px minmax(0, 1fr);
   }
-  .app-frame > aside {
+  .app-frame > aside.app-nav {
     padding: 8px 4px;
   }
-  .app-frame > aside > div {
+  .app-frame > aside.app-nav > div {
     display: none;
   }
   .app-frame nav a {

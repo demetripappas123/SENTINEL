@@ -30,7 +30,7 @@ export function OrganizationSettings() {
     <>
       <PageHeading
         title="Organization settings"
-        subtitle="This organization owns the kit dataset and the Orbit webhook."
+        subtitle="This organization owns the kit dataset and one Orbit connection."
       />
       <Panel title="Organization">
         <dl className="grid gap-3 p-4 text-sm">

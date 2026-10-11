@@ -49,7 +49,7 @@ def create_connection(
     store: AuthStore = Depends(get_auth_store),
     authorization: str | None = Header(default=None),
 ) -> ConnectionView:
-    """Connect a simulated Orbit webhook for the signed-in user's organization."""
+    """Open the one simulated Orbit connection for the signed-in user's organization."""
     user = _signed_in(store, authorization)
     try:
         return connect_organization(

@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { DataBoundary } from "../components/data-boundary";
 import { Button, PageHeading, Panel, Tag } from "../components/ui";
+import { useApiResource } from "../lib/use-api-resource";
 
 type Connection = {
   organization: { id: string; name: string };
@@ -26,36 +28,36 @@ type Inspection = {
 const fieldClass =
   "h-9 rounded-md border bg-background px-2 text-sm text-foreground";
 
+function isConnectionList(value: unknown): value is Connection[] {
+  return Array.isArray(value);
+}
+
 export function OrbitConnections() {
-  const [connections, setConnections] = useState<Connection[]>([]);
-  const [inspections, setInspections] = useState<Inspection[]>([]);
+  const connections = useApiResource("/api/orbit/connections", undefined, [], isConnectionList);
+  const [inspections, setInspections] = useState<Inspection[] | null>(null);
   const [facilityName, setFacilityName] = useState("");
   const [instanceUrl, setInstanceUrl] = useState("https://orbit.example");
   const [secret, setSecret] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
-  async function load() {
-    const response = await fetch("/api/orbit/connections");
-    const body = await response.json().catch(() => null);
-    if (!response.ok || !Array.isArray(body)) {
-      setError(message(body, "Subscriptions are unavailable"));
-      return;
-    }
-    setConnections(body);
-    const organizationId = body[0]?.organization.id;
-    if (!organizationId) {
-      setInspections([]);
-      return;
-    }
-    const recorded = await fetch("/api/orbit/organizations/" + organizationId + "/inspections");
-    const rows = await recorded.json().catch(() => []);
-    setInspections(Array.isArray(rows) ? rows : []);
-  }
-
   useEffect(() => {
-    void load();
-  }, []);
+    if (connections.status !== "ready") return;
+    const organizationId = connections.data[0]?.organization.id;
+    if (!organizationId) return;
+    let active = true;
+    void fetch("/api/orbit/organizations/" + organizationId + "/inspections")
+      .then((response) => (response.ok ? response.json() : []))
+      .then((rows) => {
+        if (active) setInspections(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {
+        if (active) setInspections([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [connections.status, connections.data]);
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -70,19 +72,31 @@ export function OrbitConnections() {
     const body = await response.json().catch(() => ({}));
     setPending(false);
     if (!response.ok) {
-      setError(message(body, "Could not create the subscription"));
+      setError(message(body, "Could not create the connection"));
       return;
     }
     setSecret(typeof body.secret === "string" ? body.secret : "");
     setFacilityName("");
-    await load();
+    setInspections(null);
+    connections.retry();
   }
+
+  if (connections.status !== "ready" || (connections.data.length > 0 && inspections === null)) {
+    return (
+      <DataBoundary requests={[{ status: connections.status === "error" ? "error" : "loading", retry: connections.retry }]}>
+        {null}
+      </DataBoundary>
+    );
+  }
+
+  const recorded = inspections ?? [];
+  const list = connections.data;
 
   return (
     <>
       <PageHeading
         title="Orbit"
-        subtitle="The signed-in organization owns one Orbit webhook."
+        subtitle="The signed-in organization has one Orbit connection."
       />
       {error ? (
         <p className="mb-4 text-sm text-destructive" role="alert">
@@ -90,10 +104,10 @@ export function OrbitConnections() {
         </p>
       ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <Panel title="New subscription">
-          {connections.length > 0 ? (
+        <Panel title="New connection">
+          {list.length > 0 ? (
             <p className="p-4 text-sm text-muted-foreground">
-              This organization already has its webhook subscription.
+              This organization already has an Orbit connection.
             </p>
           ) : (
           <form className="grid gap-3 p-4" onSubmit={create}>
@@ -116,7 +130,7 @@ export function OrbitConnections() {
               />
             </label>
             <Button type="submit" disabled={pending}>
-              {pending ? "Creating…" : "Create subscription"}
+              {pending ? "Creating…" : "Create connection"}
             </Button>
             <p className="text-xs text-muted-foreground">
               Simulated Orbit. The event type is ACTION_COMPLETED. The secret is shown once.
@@ -124,14 +138,14 @@ export function OrbitConnections() {
           </form>
           )}
         </Panel>
-        <Panel title="Subscriptions" action={<Tag>{connections.length}</Tag>}>
+        <Panel title="Connection" action={<Tag>{list.length}</Tag>}>
           {secret ? (
             <p className="border-b px-4 py-3 text-sm" role="status">
               Signing secret, copy it now: <code className="font-mono text-xs">{secret}</code>
             </p>
           ) : null}
-          {connections.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No webhook subscriptions yet.</p>
+          {list.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">No Orbit connection yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -144,7 +158,7 @@ export function OrbitConnections() {
                   </tr>
                 </thead>
                 <tbody>
-                  {connections.map((connection) => (
+                  {list.map((connection) => (
                     <tr key={connection.subscription_id} className="border-t">
                       <td className="px-4 py-3">
                         <div>{connection.facility.name}</div>
@@ -169,7 +183,7 @@ export function OrbitConnections() {
         </Panel>
       </div>
       <Panel title="Recorded deliveries" className="mt-4">
-        {inspections.length === 0 ? (
+        {recorded.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">No deliveries for this organization yet.</p>
         ) : (
           <table className="w-full text-left text-sm">
@@ -183,7 +197,7 @@ export function OrbitConnections() {
               </tr>
             </thead>
             <tbody>
-              {inspections.map((inspection) => (
+              {recorded.map((inspection) => (
                 <tr key={inspection.ingestion_mission_id + inspection.provider_action_id} className="border-t">
                   <td className="px-4 py-3">{inspection.provider_mission_id}</td>
                   <td className="px-4 py-3">{inspection.provider_action_id}</td>

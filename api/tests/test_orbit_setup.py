@@ -64,7 +64,7 @@ def test_setup_returns_a_secret_once_and_lists_without_it():
     assert listed[0]["secret"] is None
 
 
-def test_an_organization_gets_one_subscription():
+def test_an_organization_gets_one_connection():
     _install()
     _connect("Facility A", "orbit-a.example")
     again = client.post(
@@ -73,6 +73,7 @@ def test_an_organization_gets_one_subscription():
         headers={"Authorization": "Bearer " + _login()},
     )
     assert again.status_code == 409
+    assert again.json()["detail"] == "This organization already has an Orbit connection"
     listed = client.get(
         "/api/orbit/connections",
         headers={"Authorization": "Bearer " + _login()},

@@ -37,7 +37,7 @@ export default function LoginPage() {
   const title = mode === "sign-in" ? "Sign in" : mode === "join" ? "Join organization" : "Create organization";
   const subtitle =
     mode === "sign-in"
-      ? "Your account belongs to one organization. That organization owns the Orbit webhook."
+      ? "Your account belongs to one organization. That organization has one Orbit connection."
       : mode === "join"
         ? "Create an account on an organization that already exists."
         : "This creates the organization and signs you in as its first user.";

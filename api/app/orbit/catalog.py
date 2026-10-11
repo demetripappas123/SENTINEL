@@ -1,7 +1,8 @@
-"""Store of Orbit integrations, webhook subscriptions, and deliveries.
+"""Store of Orbit connections and the deliveries they receive.
 
+An organization has one connection. The subscription row is how that connection
+receives events today. A connection can carry more webhook subscriptions later.
 MemoryCatalog is the default. PostgresCatalog is used when ORBIT_CATALOG is postgres.
-An organization has one integration, and that integration has one subscription.
 """
 import os
 from abc import ABC, abstractmethod

@@ -1,6 +1,6 @@
 -- The two stored Orbit walks belong to North Yard's demo webhook.
 -- The kit rows stay on the organization and are not a subscription.
--- Run this in the Lakebase SQL editor after 006_kit_organization.sql.
+-- Running this in the Lakebase SQL editor after 006_kit_organization.sql.
 -- Demo signing secret: sentinel-orbit-demo
 
 INSERT INTO sentinel.organizations (id, name)

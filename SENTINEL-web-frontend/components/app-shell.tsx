@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   Building2,
   History,
@@ -22,7 +22,7 @@ import { useReviews, useTheme } from "../lib/browser-state";
 import { useInspectionData, useInspectionState } from "../lib/inspection-data";
 import { useQueue, useQueueState } from "../lib/queue-data";
 import { DataBoundary } from "./data-boundary";
-import { AssistantButton } from "./assistant-button";
+import { SideChatContext, SideChatPanel, SideChatProvider, SideChatToggle } from "./side-chat";
 import { cn } from "@/lib/utils";
 import { Button, Tag } from "./ui";
 
@@ -47,7 +47,24 @@ const navigation = [
   { href: "/settings/user", label: "User", icon: User, metric: false },
   { href: "/settings/organization", label: "Organization", icon: Building2, metric: false },
 ];
+function ShellGrid({ children }: { children: ReactNode }) {
+  const chat = useContext(SideChatContext);
+  const open = chat?.open ?? false;
+  return (
+    <div
+      className={cn(
+        "app-frame grid h-dvh grid-rows-[52px_minmax(0,1fr)] overflow-hidden bg-background text-foreground",
+        open && "chat-open",
+      )}
+      style={{ "--chat-width": open ? `${chat?.width ?? 0}px` : "0px" } as CSSProperties}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
+  const inheritedChat = useContext(SideChatContext);
   const path = usePathname();
   const signedOut = path === "/login";
   const data = useInspectionData();
@@ -93,9 +110,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     "/facility": data.locations.length,
     "/replay": data.events.length,
   };
-  return (
-    <div className="app-frame grid h-dvh grid-cols-[212px_minmax(0,1fr)] grid-rows-[52px_minmax(0,1fr)] overflow-hidden bg-background text-foreground">
-      <header className="col-span-2 flex items-center gap-4 border-b px-5">
+  const frame = (
+    <ShellGrid>
+      <header className="col-span-full flex items-center gap-4 border-b px-5">
         <Link className="flex items-center gap-2" href="/">
           <Image
             src="/logo.png"
@@ -115,7 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
         <span className="flex-1" />
         <Tag>Synthetic data</Tag>
-        <AssistantButton />
+        <SideChatToggle />
         <Button
           className="quiet square"
           onClick={toggleTheme}
@@ -143,7 +160,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           OP
         </Link>
       </header>
-      <aside className="flex flex-col border-r bg-sidebar p-3 text-sidebar-foreground">
+      <aside className="app-nav flex flex-col border-r bg-sidebar p-3 text-sidebar-foreground">
         <div className="mb-6 flex items-center gap-2.5 px-2">
           <Image
             src="/logo.png"
@@ -210,6 +227,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main id="main" className="relative min-h-0 overflow-auto p-6">
         <DataBoundary requests={requests}>{children}</DataBoundary>
       </main>
+      <SideChatPanel />
       <dialog
         ref={signOutDialog}
         aria-labelledby="sign-out-title"
@@ -236,6 +254,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Button>
         </footer>
       </dialog>
-    </div>
+    </ShellGrid>
   );
+  return inheritedChat ? frame : <SideChatProvider>{frame}</SideChatProvider>;
 }

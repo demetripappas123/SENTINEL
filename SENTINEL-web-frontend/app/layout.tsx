@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AppShell } from "../components/app-shell";
+import { SideChatProvider } from "../components/side-chat";
 import { InspectionDataProvider } from "../lib/inspection-data";
 import { QueueProvider } from "../lib/queue-data";
 import "./globals.css";
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <InspectionDataProvider>
           <QueueProvider>
-            <AppShell>{children}</AppShell>
+            <SideChatProvider>
+              <AppShell>{children}</AppShell>
+            </SideChatProvider>
           </QueueProvider>
         </InspectionDataProvider>
       </body>
