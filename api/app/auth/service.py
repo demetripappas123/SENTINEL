@@ -4,7 +4,6 @@ A session lasts twelve hours. The token stored in the database is the sha256
 of the bearer token the client holds.
 """
 import hashlib
-import os  # REMOVE BEFORE PRODUCTION. Only read by the SENTINEL_DEV_USER bypass below.
 import secrets
 from datetime import datetime, timezone
 
@@ -106,12 +105,6 @@ def join_organization(store: AuthStore, body: JoinOrganizationRequest) -> AuthSe
 def current_user(store: AuthStore, authorization: str | None) -> UserAccount:
     token = _bearer(authorization)
     if token is None:
-        # REMOVE BEFORE PRODUCTION. Delete this whole branch and raise 401 when token is None.
-        dev_user_id = os.environ.get("SENTINEL_DEV_USER", "").strip()  # REMOVE BEFORE PRODUCTION. Unset SENTINEL_DEV_USER on the API host.
-        if dev_user_id:  # REMOVE BEFORE PRODUCTION. This is the open-house user id, not a session.
-            dev_user = store.user_by_id(dev_user_id)  # REMOVE BEFORE PRODUCTION. Loads that user with no bearer token.
-            if dev_user is not None:  # REMOVE BEFORE PRODUCTION.
-                return dev_user  # REMOVE BEFORE PRODUCTION. Every later query uses this user's organization.
         raise OrbitRequestError(401, "Sign in required")
     user = store.user_for_session(hashlib.sha256(token.encode()).hexdigest())
     if user is None:

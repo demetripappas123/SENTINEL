@@ -27,10 +27,6 @@ class AuthStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def user_by_id(self, user_id: str) -> UserAccount | None:  # REMOVE BEFORE PRODUCTION. Only the SENTINEL_DEV_USER bypass calls this.
-        raise NotImplementedError  # REMOVE BEFORE PRODUCTION.
-
-    @abstractmethod
     def organization_name(self, organization_id: str) -> str | None:
         raise NotImplementedError
 
@@ -66,9 +62,6 @@ class MemoryAuthStore(AuthStore):
 
     def user_by_email(self, email: str) -> UserAccount | None:
         return next((user for user in self.users.values() if user.email == email), None)
-
-    def user_by_id(self, user_id: str) -> UserAccount | None:  # REMOVE BEFORE PRODUCTION. Dev-user lookup in the memory store.
-        return self.users.get(user_id)  # REMOVE BEFORE PRODUCTION.
 
     def organization_name(self, organization_id: str) -> str | None:
         user = next((item for item in self.users.values() if item.organization_id == organization_id), None)
@@ -131,21 +124,6 @@ class PostgresAuthStore(AuthStore):
                 (email,),
             ).fetchone()
         return UserAccount.model_validate(row) if row else None
-
-    def user_by_id(self, user_id: str) -> UserAccount | None:  # REMOVE BEFORE PRODUCTION. Dev-user lookup in Lakebase.
-        with self._connect() as conn:  # REMOVE BEFORE PRODUCTION.
-            row = conn.execute(  # REMOVE BEFORE PRODUCTION.
-                """
-                -- REMOVE BEFORE PRODUCTION. Delete user_by_id with the SENTINEL_DEV_USER bypass.
-                SELECT users.id, users.email, users.name, users.organization_id, -- REMOVE BEFORE PRODUCTION.
-                       users.password_hash, organizations.name AS organization_name -- REMOVE BEFORE PRODUCTION.
-                FROM sentinel.users AS users -- REMOVE BEFORE PRODUCTION.
-                JOIN sentinel.organizations AS organizations ON organizations.id = users.organization_id -- REMOVE BEFORE PRODUCTION.
-                WHERE users.id = %s -- REMOVE BEFORE PRODUCTION.
-                """,
-                (user_id,),  # REMOVE BEFORE PRODUCTION.
-            ).fetchone()  # REMOVE BEFORE PRODUCTION.
-        return UserAccount.model_validate(row) if row else None  # REMOVE BEFORE PRODUCTION.
 
     def organization_name(self, organization_id: str) -> str | None:
         with self._connect() as conn:
