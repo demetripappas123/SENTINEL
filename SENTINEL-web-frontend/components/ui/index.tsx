@@ -34,7 +34,7 @@ export function Button({
 }
 
 const badgeTone = {
-  green: "default",
+  green: "success",
   red: "destructive",
   amber: "secondary",
   yellow: "secondary",

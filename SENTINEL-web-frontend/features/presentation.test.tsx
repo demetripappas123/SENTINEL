@@ -61,8 +61,10 @@ it("explains Orbit failures and next steps throughout the review dialog", async 
     </InspectionDataProvider>,
   );
   await userEvent.type(screen.getByRole("searchbox"), "sensor timeout");
-  await userEvent.click(screen.getByRole("button", { name: /Sensor timeout/ }));
-  const dialog = screen.getByRole("dialog");
+  await userEvent.click(
+    screen.getByRole("button", { name: /Inspection failure, Sensor timeout/ }),
+  );
+  const dialog = screen.getByRole("region", { name: "Review item" });
   expect(dialog).toHaveTextContent(/sensor did not respond/i);
   expect(dialog).toHaveTextContent(/check the sensor connection/i);
   expect(dialog).not.toHaveTextContent("SENSOR_TIMEOUT");
