@@ -44,12 +44,32 @@ function clamp(frame: HTMLElement, view: View): View {
   };
 }
 
+export type MapMark = "failed" | "passed";
+
+export function hasMapPoint(id: string | null | undefined) {
+  return !!id && id in points;
+}
+
 export function FacilityMap({
   selected,
   onSelect,
+  focus = false,
+  focusScale = 2.2,
+  trail,
+  marks,
+  pin,
 }: {
   selected: string;
-  onSelect: (id: string) => void;
+  onSelect?: (id: string) => void;
+  /** Pan and zoom so the selected waypoint sits in the middle of the frame. */
+  focus?: boolean;
+  focusScale?: number;
+  /** Waypoints visited in order, drawn as a route line. */
+  trail?: string[];
+  /** Outcome dots for waypoints already inspected. */
+  marks?: Record<string, MapMark>;
+  /** A pulsing pin at the selected waypoint. */
+  pin?: "failed" | "passed" | "moving";
 }) {
   const data = useInspectionData();
   const frame = useRef<HTMLDivElement>(null);
@@ -63,6 +83,7 @@ export function FacilityMap({
   } | null>(null);
   const suppressClick = useRef(false);
   const [paint, setPaint] = useState<View>({ scale: 1.12, x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
 
   function commit(next: View) {
     const node = frame.current;
@@ -88,9 +109,25 @@ export function FacilityMap({
     return () => node.removeEventListener("wheel", onWheel);
   }, []);
 
+  useEffect(() => {
+    const node = frame.current;
+    const point = points[selected];
+    if (!focus || !node) return;
+    // With nothing to follow, step back to the whole floor plan.
+    if (!point) return commit({ scale: MIN_SCALE, x: 0, y: 0 });
+    const scale = Math.max(view.current.scale, focusScale);
+    commit({
+      scale,
+      x: -(point[0] / 100 - 0.5) * node.clientWidth * scale,
+      y: -(point[1] / 100 - 0.5) * node.clientHeight * scale,
+    });
+  }, [focus, focusScale, selected]);
+
+  const route = (trail ?? []).filter((id) => points[id]);
+
   return (
     <div
-      className="map-graphic"
+      className={"map-graphic" + (dragging ? " dragging" : "")}
       ref={frame}
       onPointerDown={(event) => {
         if ((event.target as HTMLElement).closest(".map-zoom")) return;
@@ -101,6 +138,7 @@ export function FacilityMap({
           oy: view.current.y,
           moved: false,
         };
+        setDragging(true);
         try {
           frame.current?.setPointerCapture(event.pointerId);
         } catch {
@@ -122,6 +160,7 @@ export function FacilityMap({
       onPointerUp={() => {
         if (drag.current?.moved) suppressClick.current = true;
         drag.current = null;
+        setDragging(false);
       }}
       onClickCapture={(event) => {
         if (!suppressClick.current) return;
@@ -144,6 +183,39 @@ export function FacilityMap({
           draggable={false}
           unoptimized
         />
+        {route.length > 1 && (
+          <svg className="map-trail" viewBox="0 0 1024 539" aria-hidden="true">
+            <polyline
+              points={route
+                .map((id) => points[id][0] * 10.24 + "," + points[id][1] * 5.39)
+                .join(" ")}
+            />
+          </svg>
+        )}
+        {marks &&
+          Object.entries(marks)
+            .filter(([id]) => points[id] && id !== selected)
+            .map(([id, mark]) => (
+              <span
+                key={id}
+                className={"map-mark " + mark}
+                style={{ left: points[id][0] + "%", top: points[id][1] + "%" }}
+                aria-hidden="true"
+              />
+            ))}
+        {pin && points[selected] && (
+          <span
+            key={selected + pin}
+            className={"map-pin " + pin}
+            style={{
+              left: points[selected][0] + "%",
+              top: points[selected][1] + "%",
+            }}
+            aria-hidden="true"
+          >
+            <i />
+          </span>
+        )}
         {data.locations
           .filter((location) => points[location.location_id])
           .map((location) => (
@@ -157,7 +229,8 @@ export function FacilityMap({
                 left: points[location.location_id][0] + "%",
                 top: points[location.location_id][1] + "%",
               }}
-              onClick={() => onSelect(location.location_id)}
+              onClick={() => onSelect?.(location.location_id)}
+              tabIndex={onSelect ? undefined : -1}
               aria-label={"Select " + placeName(data, location.location_id)}
               aria-pressed={selected === location.location_id}
               title={placeName(data, location.location_id)}

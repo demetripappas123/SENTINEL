@@ -1,24 +1,53 @@
 "use client";
-import { useId, useState } from "react";
-import { missionBrief, type Configuration, type CountBar, type InspectionDataset } from "@sentinel/core";
+import { useState } from "react";
+import { ChevronDown, CircleDot, Sparkles } from "lucide-react";
+import {
+  missionBrief,
+  type Configuration,
+  type CountBar,
+  type InspectionDataset,
+  type MissionBrief,
+} from "@sentinel/core";
 import { useQueue } from "../lib/queue-data";
 import { ConfigurationControl, PageHeading, Panel } from "../components/ui";
 import { MissionTable } from "../components/mission-table";
 import { useInspectionData } from "../lib/inspection-data";
 
 const ISSUE_LABELS: Record<string, string> = {
-  failed_action: "Failed Action",
-  bad_reading: "Bad Reading",
-  anomaly_with_evidence: "Anomaly With Evidence",
-  anomaly_without_evidence: "Anomaly Without Evidence",
+  failed_action: "Failed action",
+  bad_reading: "Bad reading",
+  anomaly_with_evidence: "Anomaly with evidence",
+  anomaly_without_evidence: "Anomaly without evidence",
 };
 
+const ISSUE_COLORS: Record<string, string> = {
+  failed_action: "var(--chart-red)",
+  bad_reading: "var(--chart-orange)",
+  anomaly_with_evidence: "var(--chart-yellow)",
+  anomaly_without_evidence: "var(--chart-2)",
+};
+
+const FAILURE_SHORT: Record<string, string> = {
+  READING_UNRELIABLE: "Unreliable reading",
+  SENSOR_TIMEOUT: "Sensor timeout",
+  TARGET_NOT_DETECTED: "Target not found",
+  LOCALIZATION_FAILURE: "Lost position",
+  COMMUNICATION_LOSS: "Comms lost",
+  SIGNAL_NOISE: "Signal noise",
+  OBSTACLE_DETECTION: "Obstacle",
+  PATH_BLOCKED: "Path blocked",
+};
 
 function titleCase(value: string) {
   return value
     .toLowerCase()
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function sentenceCase(value: string) {
+  const text = value.toLowerCase().replace(/_/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 export function Missions() {
@@ -39,33 +68,8 @@ export function Missions() {
           onChange={setConfiguration}
         />
       </div>
-      <div className="mission-brief">
-        <Panel title="Action failures" action={<span className="small muted">By failure type</span>}>
-          <Bars
-            rows={brief.failureTypes}
-            label={(row) => titleCase(row.key)}
-          />
-        </Panel>
-        <Panel title="Mission issues" action={<span className="small muted">By evidence rule</span>}>
-          <IssueCircle rows={brief.issues} />
-        </Panel>
-      </div>
+      <Readout brief={brief} />
       <VersionCompare data={data} />
-      <Panel title="Interpretation" className="interpretation-panel">
-        <div className="interpretation">
-          <p>{brief.interpretation.lead}</p>
-          {brief.interpretation.steps.length ? (
-            <ul>
-              {brief.interpretation.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ul>
-          ) : null}
-          {brief.interpretation.notes.map((note) => (
-            <p key={note}>{note}</p>
-          ))}
-        </div>
-      </Panel>
       <Panel
         title={missions.length + " missions"}
         action={<span className="small muted">Latest first</span>}
@@ -76,217 +80,361 @@ export function Missions() {
   );
 }
 
-const FAILURE_SHORT: Record<string, string> = {
-  READING_UNRELIABLE: "Reading",
-  SENSOR_TIMEOUT: "Timeout",
-  TARGET_NOT_DETECTED: "Target",
-  LOCALIZATION_FAILURE: "Location",
-  COMMUNICATION_LOSS: "Comms",
-  SIGNAL_NOISE: "Noise",
-  OBSTACLE_DETECTION: "Obstacle",
-  PATH_BLOCKED: "Path",
-};
+function Readout({ brief }: { brief: MissionBrief }) {
+  const { lead, steps, notes } = brief.interpretation;
+  const total = brief.issues.reduce((sum, row) => sum + row.count, 0);
+  return (
+    <section className="readout" aria-label="Interpretation">
+      <div className="readout-main">
+        <span className="readout-mark" aria-hidden="true">
+          <Sparkles className="icon" />
+        </span>
+        <div className="readout-text">
+          <h2>What the runs say</h2>
+          <p className="readout-lead">{lead}</p>
+          {total > 0 && <IssueMix rows={brief.issues} total={total} />}
+        </div>
+      </div>
+      {steps.length > 0 && (
+        <div className="readout-steps">
+          <h3>Check first</h3>
+          <ul>
+            {steps.map((step) => (
+              <li key={step}>
+                <CircleDot className="icon" />
+                <span>{step}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {notes.length > 0 && (
+        <details className="readout-notes">
+          <summary>
+            <ChevronDown className="icon" />
+            {notes.length} more{" "}
+            {notes.length === 1 ? "observation" : "observations"}
+          </summary>
+          <ul>
+            {notes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  );
+}
+
+function IssueMix({ rows, total }: { rows: CountBar[]; total: number }) {
+  const visible = rows.filter((row) => row.count > 0);
+  return (
+    <div className="issue-mix">
+      <div
+        className="issue-mix-bar"
+        role="img"
+        aria-label={
+          `${total} mission issues: ` +
+          visible
+            .map(
+              (row) =>
+                `${ISSUE_LABELS[row.key] ?? titleCase(row.key)} ${row.count}`,
+            )
+            .join(", ")
+        }
+      >
+        {visible.map((row) => (
+          <span
+            key={row.key}
+            style={{
+              flexGrow: row.count,
+              background: ISSUE_COLORS[row.key] ?? "var(--chart-2)",
+            }}
+          />
+        ))}
+      </div>
+      <ul>
+        {visible.map((row) => (
+          <li key={row.key}>
+            <i
+              style={{ background: ISSUE_COLORS[row.key] ?? "var(--chart-2)" }}
+            />
+            {ISSUE_LABELS[row.key] ?? titleCase(row.key)}
+            <b>{row.count}</b>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function VersionCompare({ data }: { data: InspectionDataset }) {
   const model = compareModel(data);
   if (!model) {
     return (
-      <Panel title="V1 against V2" className="interpretation-panel" action={<span className="small muted">All recorded runs</span>}>
+      <Panel title="V1 against V2" className="compare-panel">
         <p className="panel-body">No paired configurations to compare.</p>
       </Panel>
     );
   }
   const { v1, v2 } = model;
+  const metrics: HeadToHeadProps[] = [
+    {
+      label: "Action success",
+      v1: v1.actionSuccess,
+      v2: v2.actionSuccess,
+      unit: "%",
+      deltaUnit: " pts",
+      higherIsBetter: true,
+      max: 100,
+    },
+    {
+      label: "Mission completion",
+      v1: v1.completion,
+      v2: v2.completion,
+      unit: "%",
+      deltaUnit: " pts",
+      higherIsBetter: true,
+      max: 100,
+    },
+    {
+      label: "Failures per run",
+      v1: v1.failuresPerRun,
+      v2: v2.failuresPerRun,
+      unit: "",
+      deltaUnit: "",
+      higherIsBetter: false,
+      note: `${v1.failed} → ${v2.failed} failed actions`,
+    },
+    {
+      label: "Average duration",
+      v1: v1.duration,
+      v2: v2.duration,
+      unit: " min",
+      deltaUnit: " min",
+      higherIsBetter: false,
+    },
+  ];
   return (
-    <section className="compare-board" aria-label="V1 against V2">
-      <header className="compare-board-head">
-        <h2>V1 against V2</h2>
+    <section className="compare-panel" aria-label="V1 against V2">
+      <header className="compare-head">
+        <div>
+          <h2>V1 against V2</h2>
+          <p>
+            <Swatch version="V1" /> {v1.missions} runs
+            <Swatch version="V2" /> {v2.missions} runs
+          </p>
+        </div>
         <span>{model.range}</span>
       </header>
-      <div className="compare-kpis">
-        <KpiCard label="V2 action success" value={v2.actionSuccess} unit="%" color="var(--chart-yellow)" points={model.v2Success} />
-        <KpiCard label="V2 average duration" value={v2.duration} unit=" min" color="var(--chart-green)" points={model.v2Duration} />
-        <KpiCard label="V2 failed actions" value={v2.failed} unit="" color="var(--chart-orange)" points={model.v2Failed} />
+      <div className="h2h-row">
+        {metrics.map((metric) => (
+          <HeadToHead key={metric.label} {...metric} />
+        ))}
       </div>
-      <div className="compare-charts">
-        <article className="compare-chart">
+      <div className="compare-body">
+        <article className="compare-cell">
           <header>
-            <h3>Failed actions</h3>
-            <span>By type</span>
+            <h3>Action success by day</h3>
+            <span>Dashed line is each version’s average</span>
           </header>
-          <Stat value={v2.failed} delta={deltaText(v1.failed, v2.failed, "")} better={changeTone(v1.failed, v2.failed, false)} note="V2 compared with V1" />
-          <GroupedBars rows={model.failures} />
-          <Legend items={[{ name: "V1", color: "var(--chart-accent)" }, { name: "V2", color: "var(--chart-green)" }]} />
-        </article>
-        <article className="compare-chart">
-          <header>
-            <h3>Action success</h3>
-            <span>By day</span>
-          </header>
-          <Stat
-            value={v2.actionSuccess}
-            unit="%"
-            delta={deltaText(v1.actionSuccess, v2.actionSuccess, " pts")}
-            better={changeTone(v1.actionSuccess, v2.actionSuccess, true)}
-            note="V2 compared with V1"
+          <SuccessTimeline
+            days={model.days}
+            v1={v1.actionSuccess}
+            v2={v2.actionSuccess}
           />
-          <SuccessLines days={model.days} />
-          <Legend items={[{ name: "V1", color: "var(--chart-accent)", dashed: true }, { name: "V2", color: "var(--chart-green)" }]} />
         </article>
-        <article className="compare-chart">
+        <article className="compare-cell">
           <header>
-            <h3>Outcomes</h3>
-            <span>Recorded actions</span>
+            <h3>Why actions failed</h3>
+            <span>Failed actions by cause</span>
           </header>
-          <Stat
-            value={v2.completion}
-            unit="%"
-            delta={deltaText(v1.completion, v2.completion, " pts")}
-            better={changeTone(v1.completion, v2.completion, true)}
-            note="V2 mission completion"
-          />
-          <OutcomeDonut slices={model.outcomes} />
+          <Butterfly rows={model.failures} />
         </article>
       </div>
     </section>
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  unit,
-  color,
-  points,
-}: {
-  label: string;
-  value: number | null;
-  unit: string;
-  color: string;
-  points: number[];
-}) {
+function Swatch({ version }: { version: "V1" | "V2" }) {
   return (
-    <article className="compare-kpi">
-      <div>
-        <strong>
-          {value == null ? "—" : formatStat(value)}
-          {unit === "%" && value != null ? <small>%</small> : null}
-          {unit === " min" && value != null ? <small> min</small> : null}
-        </strong>
-        <span>{label}</span>
-      </div>
-      <Sparkline values={points} color={color} label={label} />
-    </article>
+    <i className={"swatch " + version.toLowerCase()} aria-label={version} />
   );
 }
 
-function Stat({
-  value,
-  unit = "",
-  delta,
-  better,
+type HeadToHeadProps = {
+  label: string;
+  v1: number | null;
+  v2: number | null;
+  unit: string;
+  deltaUnit: string;
+  higherIsBetter: boolean;
+  max?: number;
+  note?: string;
+};
+
+function HeadToHead({
+  label,
+  v1,
+  v2,
+  unit,
+  deltaUnit,
+  higherIsBetter,
+  max,
   note,
-}: {
-  value: number | null;
-  unit?: string;
-  delta: string;
-  better: "better" | "worse" | "flat";
-  note: string;
-}) {
+}: HeadToHeadProps) {
+  const tone = changeTone(v1, v2, higherIsBetter);
+  const scale = max ?? Math.max(v1 ?? 0, v2 ?? 0, 1);
+  const width = (value: number | null) =>
+    value == null ? 0 : Math.max(2, (value / scale) * 100);
   return (
-    <div className="compare-stat">
-      <strong>
-        {value == null ? "—" : formatStat(value)}
-        {unit === "%" && value != null ? <small>%</small> : null}
-      </strong>
-      <span className={"compare-delta " + better}>{delta}</span>
-      <p>{note}</p>
+    <div className="h2h">
+      <span className="h2h-label">{label}</span>
+      <div className="h2h-value">
+        <strong>
+          {value(v2)}
+          {v2 != null && unit && <small>{unit}</small>}
+        </strong>
+        <span className={"compare-delta " + tone}>
+          {deltaText(v1, v2, deltaUnit)}
+        </span>
+      </div>
+      <div
+        className="h2h-bars"
+        role="img"
+        aria-label={`${label}: V1 ${value(v1)}${unit}, V2 ${value(v2)}${unit}`}
+      >
+        <div>
+          <span>V1</span>
+          <div className="h2h-track">
+            <i className="v1" style={{ width: width(v1) + "%" }} />
+          </div>
+          <b>{value(v1)}</b>
+        </div>
+        <div>
+          <span>V2</span>
+          <div className="h2h-track">
+            <i className="v2" style={{ width: width(v2) + "%" }} />
+          </div>
+          <b>{value(v2)}</b>
+        </div>
+      </div>
+      {note && <p className="h2h-note">{note}</p>}
     </div>
   );
 }
 
-function Legend({ items }: { items: { name: string; color: string; dashed?: boolean }[] }) {
-  return (
-    <ul className="compare-legend">
-      {items.map((item) => (
-        <li key={item.name}>
-          <i className={item.dashed ? "dashed" : ""} style={{ background: item.dashed ? "transparent" : item.color, borderColor: item.color }} />
-          {item.name}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function Sparkline({ values, color, label }: { values: number[]; color: string; label: string }) {
-  const id = useId().replace(/:/g, "");
-  const path = areaPath(values, 96, 36);
-  return (
-    <svg className="compare-spark" viewBox="0 0 96 36" role="img" aria-label={`${label} trend`}>
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-      {path ? <path d={path.area} fill={`url(#${id})`} /> : null}
-      {path ? <path d={path.line} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" /> : null}
-    </svg>
-  );
-}
-
-function GroupedBars({ rows }: { rows: { key: string; label: string; v1: number; v2: number }[] }) {
-  const max = Math.max(1, ...rows.flatMap((row) => [row.v1, row.v2]));
-  const width = 320;
-  const height = 168;
-  const baseline = 132;
-  const group = width / Math.max(rows.length, 1);
-  const bar = Math.min(16, group * 0.28);
-  return (
-    <svg className="compare-plot" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Failed actions by type for V1 and V2">
-      {rows.map((row, index) => {
-        const cx = group * index + group / 2;
-        const h1 = (row.v1 / max) * (baseline - 8);
-        const h2 = (row.v2 / max) * (baseline - 8);
-        return (
-          <g key={row.key}>
-            <path d={roundedBar(cx - bar - 2, baseline - h1, bar, h1)} fill="var(--chart-accent)" />
-            <path d={roundedBar(cx + 2, baseline - h2, bar, h2)} fill="var(--chart-green)" />
-            <text x={cx} y={152} textAnchor="middle">
-              {row.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-function SuccessLines({ days }: { days: DayRow[] }) {
-  const width = 320;
-  const height = 168;
-  const left = 8;
-  const right = 8;
-  const baseline = 132;
+function SuccessTimeline({
+  days,
+  v1,
+  v2,
+}: {
+  days: DayRow[];
+  v1: number | null;
+  v2: number | null;
+}) {
+  const width = 520;
+  const height = 200;
+  const left = 34;
+  const right = 10;
   const top = 12;
+  const baseline = 168;
   const span = Math.max(days.length - 1, 1);
+  const rates = days
+    .flatMap((day) => [day.v1Rate, day.v2Rate])
+    .filter((rate): rate is number => rate != null);
+  // Start the axis near the data so day-to-day movement stays readable.
+  const floor = Math.max(
+    0,
+    Math.min(50, Math.floor((Math.min(100, ...rates) - 5) / 25) * 25),
+  );
   const xAt = (index: number) => left + (index / span) * (width - left - right);
-  const yAt = (rate: number) => baseline - (rate / 100) * (baseline - top);
-  const v1 = days.flatMap((day, index) => (day.v1Rate == null ? [] : [[xAt(index), yAt(day.v1Rate)] as [number, number]]));
-  const v2 = days.flatMap((day, index) => (day.v2Rate == null ? [] : [[xAt(index), yAt(day.v2Rate)] as [number, number]]));
-  const v2Line = smooth(v2);
+  const yAt = (rate: number) =>
+    baseline - ((rate - floor) / (100 - floor)) * (baseline - top);
+  const series = (key: "v1Rate" | "v2Rate") =>
+    days.flatMap((day, index) =>
+      day[key] == null ? [] : [[xAt(index), yAt(day[key]!), index] as const],
+    );
+  const s1 = series("v1Rate");
+  const s2 = series("v2Rate");
+  const extent = (points: readonly (readonly [number, number, number])[]) =>
+    points.length ? [points[0][0], points[points.length - 1][0]] : null;
+  const e1 = extent(s1);
+  const e2 = extent(s2);
+  const rollout = s2.length ? s2[0][2] : -1;
   const labelStep = days.length > 8 ? 2 : 1;
   return (
-    <svg className="compare-plot" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily action success for V1 and V2">
-      {[0, 50, 100].map((rate) => (
-        <line key={rate} x1={left} x2={width - right} y1={yAt(rate)} y2={yAt(rate)} />
+    <svg
+      className="timeline-plot"
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={`Daily action success. V1 averages ${value(v1)}%, V2 averages ${value(v2)}%.`}
+    >
+      {[floor, (floor + 100) / 2, 100].map((rate) => (
+        <g key={rate}>
+          <line
+            className="grid"
+            x1={left}
+            x2={width - right}
+            y1={yAt(rate)}
+            y2={yAt(rate)}
+          />
+          <text x={left - 8} y={yAt(rate) + 3} textAnchor="end">
+            {rate}%
+          </text>
+        </g>
       ))}
-      {v2Line ? <path d={`${v2Line} L${v2[v2.length - 1][0]},${baseline} L${v2[0][0]},${baseline} Z`} className="v2-area" /> : null}
-      {v1.length > 1 ? <path d={smooth(v1)} className="v1-line" /> : null}
-      {v2Line ? <path d={v2Line} className="v2-line" /> : null}
+      {rollout > 0 && s1.length > 0 && (
+        <g className="rollout">
+          <line
+            x1={xAt(rollout) - (xAt(1) - xAt(0)) / 2}
+            x2={xAt(rollout) - (xAt(1) - xAt(0)) / 2}
+            y1={top}
+            y2={baseline}
+          />
+          <text x={xAt(rollout) - (xAt(1) - xAt(0)) / 2 + 6} y={baseline - 6}>
+            V2 starts
+          </text>
+        </g>
+      )}
+      {e1 && v1 != null && (
+        <line
+          className="avg v1"
+          x1={e1[0]}
+          x2={e1[1]}
+          y1={yAt(v1)}
+          y2={yAt(v1)}
+        />
+      )}
+      {e2 && v2 != null && (
+        <line
+          className="avg v2"
+          x1={e2[0]}
+          x2={e2[1]}
+          y1={yAt(v2)}
+          y2={yAt(v2)}
+        />
+      )}
+      {s1.length > 1 && (
+        <path className="series v1" d={smooth(s1.map(([x, y]) => [x, y]))} />
+      )}
+      {s2.length > 1 && (
+        <path className="series v2" d={smooth(s2.map(([x, y]) => [x, y]))} />
+      )}
+      {s1.map(([x, y, index]) => (
+        <circle key={"a" + index} className="dot v1" cx={x} cy={y} r="3" />
+      ))}
+      {s2.map(([x, y, index]) => (
+        <circle key={"b" + index} className="dot v2" cx={x} cy={y} r="3" />
+      ))}
       {days.map((day, index) =>
         index % labelStep === 0 ? (
-          <text key={day.day} x={xAt(index)} y={152} textAnchor="middle">
+          <text
+            key={day.day}
+            x={xAt(index)}
+            y={height - 10}
+            textAnchor="middle"
+          >
             {dayLabel(day.day)}
           </text>
         ) : null,
@@ -295,56 +443,56 @@ function SuccessLines({ days }: { days: DayRow[] }) {
   );
 }
 
-function OutcomeDonut({ slices }: { slices: { key: string; label: string; count: number; color: string }[] }) {
-  const total = slices.reduce((sum, slice) => sum + slice.count, 0);
-  let cursor = 0;
-  const stops = slices
-    .filter((slice) => slice.count > 0)
-    .map((slice) => {
-      const start = cursor;
-      cursor += (slice.count / Math.max(total, 1)) * 100;
-      return `${slice.color} ${start}% ${cursor}%`;
-    });
+function Butterfly({
+  rows,
+}: {
+  rows: { key: string; label: string; v1: number; v2: number }[];
+}) {
+  const max = Math.max(1, ...rows.flatMap((row) => [row.v1, row.v2]));
+  if (!rows.length)
+    return (
+      <p className="panel-body small muted">No failed actions recorded.</p>
+    );
   return (
-    <div className="compare-donut">
-      <div
-        style={{ background: total ? `conic-gradient(${stops.join(", ")})` : "var(--secondary)" }}
-        role="img"
-        aria-label={slices.map((slice) => `${slice.label} ${slice.count}`).join(", ")}
-      >
-        <span>{total}</span>
+    <div
+      className="butterfly"
+      role="table"
+      aria-label="Failed actions by cause for V1 and V2"
+    >
+      <div className="butterfly-row butterfly-head" role="row">
+        <span role="columnheader">
+          <Swatch version="V1" /> V1
+        </span>
+        <span role="columnheader">Cause</span>
+        <span role="columnheader">
+          V2 <Swatch version="V2" />
+        </span>
       </div>
-      <ul className="compare-legend">
-        {slices.map((slice) => (
-          <li key={slice.key}>
-            <i style={{ background: slice.color }} />
-            {slice.label}
-            <b>{slice.count}</b>
-          </li>
-        ))}
-      </ul>
+      {rows.map((row) => (
+        <div className="butterfly-row" role="row" key={row.key}>
+          <span
+            className="butterfly-side left"
+            role="cell"
+            aria-label={`V1 ${row.v1}`}
+          >
+            <b>{row.v1 || ""}</b>
+            <i className="v1" style={{ width: (row.v1 / max) * 100 + "%" }} />
+          </span>
+          <span className="butterfly-label" role="rowheader">
+            {row.label}
+          </span>
+          <span
+            className="butterfly-side right"
+            role="cell"
+            aria-label={`V2 ${row.v2}`}
+          >
+            <i className="v2" style={{ width: (row.v2 / max) * 100 + "%" }} />
+            <b>{row.v2 || ""}</b>
+          </span>
+        </div>
+      ))}
     </div>
   );
-}
-
-function roundedBar(x: number, y: number, width: number, height: number) {
-  if (height <= 0) return "";
-  const radius = Math.min(4, width / 2, height);
-  return `M${x},${y + height} V${y + radius} Q${x},${y} ${x + radius},${y} H${x + width - radius} Q${x + width},${y} ${x + width},${y + radius} V${y + height} Z`;
-}
-
-function areaPath(values: number[], width: number, height: number) {
-  if (values.length < 2) return null;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const points = values.map((value, index) => {
-    const x = (index / (values.length - 1)) * width;
-    const y = height - 4 - ((value - min) / span) * (height - 8);
-    return [x, y] as [number, number];
-  });
-  const line = smooth(points);
-  return { line, area: `${line} L${width},${height} L0,${height} Z` };
 }
 
 function smooth(points: [number, number][]) {
@@ -373,190 +521,129 @@ type DayRow = {
 
 function dayLabel(day: string) {
   const date = new Date(day + "T00:00:00Z");
-  return date.toLocaleDateString("en-US", { month: "numeric", day: "numeric", timeZone: "UTC" });
+  return date.toLocaleDateString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function compareModel(data: InspectionDataset) {
   const v1 = versionSnapshot(data, "V1");
   const v2 = versionSnapshot(data, "V2");
   if (!v1.missions || !v2.missions) return null;
-  const missions = new Map(data.missions.map((mission) => [mission.mission_id, mission]));
-  const days = new Map<string, { v1: [number, number]; v2: [number, number]; v2Duration: number[]; v2Failed: number }>();
-  const ensure = (day: string) => {
-    const row = days.get(day) ?? { v1: [0, 0], v2: [0, 0], v2Duration: [], v2Failed: 0 };
-    days.set(day, row);
-    return row;
-  };
-  for (const mission of data.missions) {
-    const day = mission.start_time?.slice(0, 10);
-    if (!day || (mission.configuration_version !== "V1" && mission.configuration_version !== "V2")) continue;
-    if (mission.configuration_version === "V2" && mission.duration_min != null) ensure(day).v2Duration.push(mission.duration_min);
-  }
+  const missions = new Map(
+    data.missions.map((mission) => [mission.mission_id, mission]),
+  );
+  const days = new Map<
+    string,
+    { v1: [number, number]; v2: [number, number] }
+  >();
   const failures = new Map<string, { v1: number; v2: number }>();
-  let v1Passed = 0;
-  let v2Passed = 0;
   for (const action of data.actions) {
     const mission = missions.get(action.mission_id);
     const version = mission?.configuration_version;
     if (version !== "V1" && version !== "V2") continue;
-    const day = mission?.start_time?.slice(0, 10);
     if (action.status !== "SUCCESS" && action.status !== "FAILED") continue;
+    const day = mission?.start_time?.slice(0, 10);
     if (day) {
-      const row = ensure(day);
+      const row = days.get(day) ?? { v1: [0, 0], v2: [0, 0] };
+      days.set(day, row);
       const side = version === "V1" ? row.v1 : row.v2;
-      if (action.status === "SUCCESS") side[0] += 1;
-      else side[1] += 1;
-      if (version === "V2" && action.status === "FAILED") row.v2Failed += 1;
+      side[action.status === "SUCCESS" ? 0 : 1] += 1;
     }
-    if (action.status === "SUCCESS") {
-      if (version === "V1") v1Passed += 1;
-      else v2Passed += 1;
-    } else {
-      const row = failures.get(action.failure_type || "UNKNOWN") ?? { v1: 0, v2: 0 };
+    if (action.status === "FAILED") {
+      const key = action.failure_type || "UNKNOWN";
+      const row = failures.get(key) ?? { v1: 0, v2: 0 };
       row[version === "V1" ? "v1" : "v2"] += 1;
-      failures.set(action.failure_type || "UNKNOWN", row);
+      failures.set(key, row);
     }
   }
   const ordered = [...days.keys()].sort();
-  const rate = (pair: [number, number]) => (pair[0] + pair[1] ? (pair[0] / (pair[0] + pair[1])) * 100 : null);
-  const dayRows = ordered.map((day) => {
-    const row = days.get(day)!;
-    return { day, v1Rate: rate(row.v1), v2Rate: rate(row.v2) };
-  });
-  const v2Days = ordered.map((day) => days.get(day)!).filter((row) => row.v2[0] + row.v2[1] > 0);
+  const rate = (pair: [number, number]) =>
+    pair[0] + pair[1] ? (pair[0] / (pair[0] + pair[1])) * 100 : null;
   return {
     v1,
     v2,
-    range: ordered.length ? `${dayLabel(ordered[0])} – ${dayLabel(ordered[ordered.length - 1])}` : "All recorded runs",
-    v2Success: v2Days.flatMap((row) => {
-      const value = rate(row.v2);
-      return value == null ? [] : [value];
+    range: ordered.length
+      ? `${dayLabel(ordered[0])} – ${dayLabel(ordered[ordered.length - 1])}`
+      : "All recorded runs",
+    days: ordered.map((day) => {
+      const row = days.get(day)!;
+      return { day, v1Rate: rate(row.v1), v2Rate: rate(row.v2) };
     }),
-    v2Duration: ordered.flatMap((day) => {
-      const values = days.get(day)!.v2Duration;
-      return values.length ? [values.reduce((sum, value) => sum + value, 0) / values.length] : [];
-    }),
-    v2Failed: v2Days.map((row) => row.v2Failed),
-    days: dayRows,
     failures: [...failures.entries()]
-      .sort((a, b) => b[1].v1 + b[1].v2 - (a[1].v1 + a[1].v2) || a[0].localeCompare(b[0]))
-      .slice(0, 6)
-      .map(([key, counts]) => ({ key, label: FAILURE_SHORT[key] ?? titleCase(key).split(" ")[0], v1: counts.v1, v2: counts.v2 })),
-    outcomes: [
-      { key: "v1-passed", label: "V1 passed", count: v1Passed, color: "var(--chart-accent)" },
-      { key: "v1-failed", label: "V1 failed", count: v1.failed, color: "var(--chart-yellow)" },
-      { key: "v2-passed", label: "V2 passed", count: v2Passed, color: "var(--chart-green)" },
-      { key: "v2-failed", label: "V2 failed", count: v2.failed, color: "var(--chart-red)" },
-    ],
+      .sort(
+        (a, b) =>
+          b[1].v1 + b[1].v2 - (a[1].v1 + a[1].v2) || a[0].localeCompare(b[0]),
+      )
+      .slice(0, 7)
+      .map(([key, counts]) => ({
+        key,
+        label: FAILURE_SHORT[key] ?? sentenceCase(key),
+        ...counts,
+      })),
   };
 }
 
 function deltaText(from: number | null, to: number | null, unit: string) {
   if (from == null || to == null) return "—";
   const change = to - from;
-  return (change > 0 ? "+" : change < 0 ? "−" : "") + formatStat(Math.abs(change)) + unit;
+  return (
+    (change > 0 ? "+" : change < 0 ? "−" : "") +
+    formatStat(Math.abs(change)) +
+    unit
+  );
 }
 
-function changeTone(from: number | null, to: number | null, higherIsBetter: boolean): "better" | "worse" | "flat" {
+function changeTone(
+  from: number | null,
+  to: number | null,
+  higherIsBetter: boolean,
+): "better" | "worse" | "flat" {
   if (from == null || to == null || to === from) return "flat";
   const improved = higherIsBetter ? to > from : to < from;
   return improved ? "better" : "worse";
 }
 
 function versionSnapshot(data: InspectionDataset, version: string) {
-  const missions = data.missions.filter((mission) => mission.configuration_version === version);
+  const missions = data.missions.filter(
+    (mission) => mission.configuration_version === version,
+  );
   const ids = new Set(missions.map((mission) => mission.mission_id));
   const actions = data.actions.filter((action) => ids.has(action.mission_id));
-  const recorded = actions.filter((action) => action.status === "SUCCESS" || action.status === "FAILED");
-  const passed = recorded.filter((action) => action.status === "SUCCESS").length;
-  const durations = missions.flatMap((mission) => (mission.duration_min == null ? [] : [mission.duration_min]));
+  const recorded = actions.filter(
+    (action) => action.status === "SUCCESS" || action.status === "FAILED",
+  );
+  const passed = recorded.filter(
+    (action) => action.status === "SUCCESS",
+  ).length;
+  const failed = actions.filter((action) => action.status === "FAILED").length;
+  const durations = missions.flatMap((mission) =>
+    mission.duration_min == null ? [] : [mission.duration_min],
+  );
   return {
     version,
     missions: missions.length,
     actionSuccess: recorded.length ? (passed / recorded.length) * 100 : null,
     completion: missions.length
-      ? (missions.filter((mission) => mission.mission_status === "COMPLETED").length / missions.length) * 100
+      ? (missions.filter((mission) => mission.mission_status === "COMPLETED")
+          .length /
+          missions.length) *
+        100
       : null,
-    duration: durations.length ? durations.reduce((sum, value) => sum + value, 0) / durations.length : null,
-    failed: actions.filter((action) => action.status === "FAILED").length,
+    duration: durations.length
+      ? durations.reduce((sum, value) => sum + value, 0) / durations.length
+      : null,
+    failed,
+    failuresPerRun: missions.length ? failed / missions.length : null,
   };
 }
 
-function formatStat(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+function value(number: number | null) {
+  return number == null ? "—" : formatStat(number);
 }
 
-function IssueCircle({ rows }: { rows: CountBar[] }) {
-  const total = rows.reduce((sum, row) => sum + row.count, 0);
-  const colorAt = (index: number) => scaleColor(rows.length <= 1 ? 0 : index / (rows.length - 1));
-  const slices = rows
-    .map((row, index) => ({ row, color: colorAt(index) }))
-    .filter((slice) => slice.row.count > 0);
-  let cursor = 0;
-  const stops = slices.map((slice) => {
-    const start = cursor;
-    cursor += (slice.row.count / Math.max(total, 1)) * 100;
-    return `${slice.color} ${start}% ${cursor}%`;
-  });
-  return (
-    <div className="issue-chart">
-      <div
-        className="issue-donut"
-        style={{ background: total ? `conic-gradient(${stops.join(", ")})` : "var(--secondary)" }}
-        role="img"
-        aria-label={`${total} mission issues`}
-      >
-        <span>{total}</span>
-      </div>
-      <ul className="issue-legend">
-        {rows.map((row, index) => (
-          <li key={row.key}>
-            <i style={{ background: colorAt(index) }} />
-            <span>{ISSUE_LABELS[row.key] ?? titleCase(row.key)}</span>
-            <span className="percent">{row.count}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function scaleColor(t: number) {
-  const clamped = Math.min(1, Math.max(0, t));
-  if (clamped <= 0.5) {
-    return `color-mix(in srgb, var(--chart-yellow) ${Math.round((clamped / 0.5) * 100)}%, var(--chart-red))`;
-  }
-  return `color-mix(in srgb, var(--chart-green) ${Math.round(((clamped - 0.5) / 0.5) * 100)}%, var(--chart-yellow))`;
-}
-
-function yAxisColor(index: number, count: number) {
-  return scaleColor(count <= 1 ? 0 : index / (count - 1));
-}
-
-function Bars({
-  rows,
-  label,
-}: {
-  rows: CountBar[];
-  label: (row: CountBar) => string;
-}) {
-  const max = Math.max(1, ...rows.map((row) => row.count));
-  if (!rows.length) return <p className="panel-body">None recorded.</p>;
-  return (
-    <div className="diagram-list">
-      {rows.map((row, index) => {
-        const name = label(row);
-        const width = row.count === 0 ? 0 : Math.max(4, (row.count / max) * 100);
-        return (
-          <div className="diagram-row" key={row.key}>
-            <span>{name}</span>
-            <div className="bar" role="img" aria-label={`${name}: ${row.count}`}>
-              <span style={{ width: width + "%", background: yAxisColor(index, rows.length) }} />
-            </div>
-            <span className="percent">{row.count}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
+function formatStat(number: number) {
+  return Number.isInteger(number) ? String(number) : number.toFixed(1);
 }
