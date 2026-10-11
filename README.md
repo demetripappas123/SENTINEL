@@ -4,7 +4,7 @@ SENTINEL is an inspection triage platform built for the NextEra SPOT challenge a
 
 ## Demo
 
-[![SENTINEL demo video](https://img.youtube.com/vi/EhBOlE83Gbk/maxresdefault.jpg)](https://youtu.be/EhBOlE83Gbk)
+[![SENTINEL demo video](screenshots/demo-thumbnail.jpg)](https://youtu.be/EhBOlE83Gbk)
 
 [Watch the demo on YouTube](https://youtu.be/EhBOlE83Gbk)
 
