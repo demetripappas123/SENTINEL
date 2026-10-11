@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const api = process.env.SENTINEL_API_URL ?? "http://127.0.0.1:8000";
 
+// REMOVE BEFORE PRODUCTION. Unset SENTINEL_DEV_OPEN on Vercel and delete this line.
+const devOpen = process.env.SENTINEL_DEV_OPEN === "1";
+
 function isPublic(pathname: string) {
   return (
     pathname === "/login" ||
@@ -32,6 +35,8 @@ export async function middleware(request: NextRequest) {
     }
     return NextResponse.next();
   }
+  // REMOVE BEFORE PRODUCTION. Delete this line so a missing cookie is redirected to /login again.
+  if (!token && devOpen) return NextResponse.next();
   if (!token || !(await sessionIsValid(token))) {
     const response = NextResponse.redirect(new URL("/login", request.url));
     if (token) response.cookies.delete("sentinel_session");

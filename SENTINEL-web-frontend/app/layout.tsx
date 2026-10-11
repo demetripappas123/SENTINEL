@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   title: "SENTINEL | SPOT Operations",
   description:
     "Mission reliability and inspection triage for NextEra Energy.",
+  icons: {
+    icon: [{ url: "/logo.png", type: "image/png" }],
+    apple: "/logo.png",
+    shortcut: "/logo.png",
+  },
 };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
