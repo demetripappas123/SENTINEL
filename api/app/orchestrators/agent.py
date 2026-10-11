@@ -34,7 +34,7 @@ from app.dtos.agent import (
     ChatRequest,
 )
 from app.services.agent import tools
-from app.services.agent.chat import AgentFailed, AgentUnavailable, ask
+from app.services.agent.chat import AgentFailed, AgentUnavailable, ask, operator_context
 from app.services.agent.registry import manifest
 
 logger = logging.getLogger("sentinel.agent")
@@ -163,7 +163,7 @@ def chat(
         raise HTTPException(status_code=401, detail="Sign in required")
     started = time.perf_counter()
     try:
-        reply = ask(body.message, body.session_id, user.id, authorization)
+        reply = ask(body.message, body.session_id, user.id, authorization, operator_context(user))
     except AgentUnavailable as exc:
         raise HTTPException(status_code=503, detail="The inspection assistant is not running.") from exc
     except AgentFailed as exc:

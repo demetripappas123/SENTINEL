@@ -68,6 +68,16 @@ def test_chat_forwards_the_session_without_storing_the_token(monkeypatch):
 
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)
     monkeypatch.setattr(chat_service.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(
+        "app.orchestrators.agent.operator_context",
+        lambda user: {
+            "user_id": user.id,
+            "user_name": user.name,
+            "organization_id": user.organization_id,
+            "organization_name": user.organization_name,
+            "facilities": [{"id": "fac_north_demo", "name": "North Yard"}],
+        },
+    )
     app.dependency_overrides[require_user] = lambda: USER
     try:
         response = client.post(
@@ -83,6 +93,10 @@ def test_chat_forwards_the_session_without_storing_the_token(monkeypatch):
     assert captured["url"].endswith("/api/invocations")
     assert captured["header"] == "Bearer operator-token"
     assert captured["body"]["input"]["actor"] == "usr_north"
+    assert captured["body"]["input"]["operator"]["organization_id"] == "org_north"
+    assert captured["body"]["input"]["operator"]["facilities"] == [
+        {"id": "fac_north_demo", "name": "North Yard"}
+    ]
     assert "operator-token" not in json.dumps(captured["body"])
     assert captured["body"]["input"]["messages"] == [
         {"role": "user", "content": "Which pump is failing?"}
@@ -94,6 +108,7 @@ def test_chat_reports_when_the_assistant_is_down(monkeypatch):
         raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(chat_service.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr("app.orchestrators.agent.operator_context", lambda user: {"facilities": []})
     app.dependency_overrides[require_user] = lambda: USER
     try:
         response = client.post(

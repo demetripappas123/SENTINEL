@@ -16,6 +16,14 @@ def fetch(conn, sql: str, params: tuple) -> list[dict]:
     return [dict(row) for row in rows]
 
 
+def facilities(conn, organization_id: str) -> list[dict]:
+    return fetch(
+        conn,
+        "SELECT id, name FROM sentinel.facilities WHERE organization_id = %s ORDER BY name, id",
+        (organization_id,),
+    )
+
+
 def facility(conn, organization_id: str, facility_id: str) -> dict | None:
     rows = fetch(
         conn,
@@ -388,7 +396,7 @@ def evidence_rows(conn, organization_id: str, evidence_type: str, ids: list[str]
             conn,
             """
             SELECT source, action_id AS id, action_id, mission_id, asset_id, location_id, timestamp,
-                   action_type, status, failure_type, battery_pct
+                   action_type, status, failure_type, battery_pct, duration_sec
             FROM sentinel.actions
             WHERE organization_id = %s AND action_id = ANY(%s)
             """,

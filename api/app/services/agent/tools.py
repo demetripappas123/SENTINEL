@@ -154,15 +154,24 @@ def get_inspection_queue(conn, organization_id: str, request_id: str, body: Insp
         rows = [row for row in rows if claim_severity.get((row["source"], row["action_id"])) == body.severity]
         warnings.append("Severity is the anomaly label severity, not a separate queue field.")
     rows = rows[: body.limit]
+    named = {
+        row["asset_id"]: row
+        for row in read.assets_by_ids(conn, organization_id, [item["asset_id"] for item in rows if item.get("asset_id")])
+    }
     items = []
     evidence = []
     for row in rows:
         item_id = f"{row['source']}:{row['action_id']}"
+        asset = named.get(row["asset_id"], {})
         items.append(
             {
                 "inspection_id": row["action_id"],
                 "queue_item_id": item_id,
                 "asset_id": row["asset_id"],
+                "asset_name": asset.get("asset_name"),
+                "asset_type": asset.get("asset_type"),
+                "location_id": row.get("location_id"),
+                "mission_id": row.get("mission_id"),
                 "verdict": row["verdict"],
                 "rank": row["rank"],
                 "cause": row["cause"],
@@ -323,15 +332,21 @@ def get_rule_evaluations(conn, organization_id: str, request_id: str, body: Rule
 
 
 def get_facility_summary(conn, organization_id: str, request_id: str, body: FacilitySummaryRequest) -> ToolEnvelope:
-    if _facility(conn, organization_id, body.facility_id) == "missing":
-        return _insufficient("get_facility_summary", request_id, NO_FACILITY_LINK)
+    owned = read.facilities(conn, organization_id)
+    if body.facility_id:
+        if _facility(conn, organization_id, body.facility_id) == "missing":
+            return _insufficient("get_facility_summary", request_id, NO_FACILITY_LINK)
+        owned = [row for row in owned if row["id"] == body.facility_id]
+    elif not owned:
+        return _insufficient("get_facility_summary", request_id, "This organization has no facility.")
     start, end, window_warning = _window(body.start_time, body.end_time)
     if window_warning:
         return _insufficient("get_facility_summary", request_id, window_warning)
     fresh = read.freshness(conn, organization_id)
     actions = read.recent_actions(conn, organization_id, start, end, 10)
     data = {
-        "facility_id": body.facility_id,
+        "facilities": [{"id": row["id"], "name": row["name"]} for row in owned],
+        "facility_id": owned[0]["id"] if len(owned) == 1 else body.facility_id,
         "assets_by_type": read.asset_type_counts(conn, organization_id),
         "queue_by_verdict": read.queue_verdict_counts(conn, organization_id),
         "claims_by_type": read.claim_type_counts(conn, organization_id, start, end),

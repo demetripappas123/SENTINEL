@@ -95,6 +95,8 @@ async def _invoke_agent(
         actor = auth.namespace("actor", actor)
     user_auth = auth is not None
     run_kwargs = {"workspace_client_for": auth.client_for} if user_auth else {}
+    if isinstance(payload.get("operator"), dict):
+        run_kwargs["operator"] = payload["operator"]
     model = payload.get("model")
     model = model if isinstance(model, str) else None
     outputs = []

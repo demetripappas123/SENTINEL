@@ -87,7 +87,7 @@ class RuleEvaluationsRequest(BaseModel):
 
 class FacilitySummaryRequest(BaseModel):
     model_config = _forbid()
-    facility_id: str = Field(min_length=1)
+    facility_id: str | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
 

@@ -19,13 +19,34 @@ class AgentFailed(Exception):
         self.detail = detail
 
 
-def ask(message: str, session_id: str, actor: str, authorization: str) -> str:
+def operator_context(user) -> dict:
+    """Who is signed in, and which facilities that organization owns."""
+    facilities = []
+    try:
+        from app.db import connect
+        from app.services.agent.read import facilities as facility_rows
+
+        with connect() as conn:
+            facilities = facility_rows(conn, user.organization_id)
+    except Exception:
+        facilities = []
+    return {
+        "user_id": user.id,
+        "user_name": user.name,
+        "organization_id": user.organization_id,
+        "organization_name": user.organization_name,
+        "facilities": [{"id": row["id"], "name": row["name"]} for row in facilities],
+    }
+
+
+def ask(message: str, session_id: str, actor: str, authorization: str, operator: dict) -> str:
     origin = os.environ.get("SENTINEL_AGENT_URL", "http://127.0.0.1:8010").rstrip("/")
     body = {
         "id": str(uuid4()),
         "session_id": session_id,
         "input": {
             "actor": actor,
+            "operator": operator,
             "messages": [{"role": "user", "content": message}],
         },
     }

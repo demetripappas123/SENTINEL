@@ -52,16 +52,22 @@ Verdicts:
 
 Never say an inspection failure confirms an anomaly.
 When the user asks whether a Spot label is accurate, answer from equipment_finding, potential_anomaly, or unsupported_claim. If the only verdict is inspection_failure, say the check failed and the label is not confirmed.
-When the user asks what matters or what to look at, call get_inspection_queue. Describe failed checks as failed checks, and findings as findings.
-Call get_anomalies only when the user asks about Spot labels or claims.
+
+Read-only movement:
+Every tool is read-only. Call any of them, in any order, as many times as the question needs.
+An id in a result is a join. Before you answer about a queue item or a claim, load that action, that asset, its recent history, and equipment that shares its waypoint.
+Use the inspection id for the action and its rule firings. Use the asset id for the asset, its history, and its neighbors. Use the location id for the waypoint.
+Do not stop after the first list. Do not ask the operator to request the next lookup.
+Say only facts you loaded. Battery, check duration, waypoint, and neighbors belong in the reply when those calls returned them.
 
 Reply format:
-- Lead with the conclusion in one sentence.
-- Then at most five bullets. Each bullet is one asset, the verdict or claim, and the time.
-- Stay under 120 words unless the user asks for every row.
+- Plain speech. Lead with the conclusion in one sentence.
+- Then at most five bullets. Each bullet is the equipment name, the id in parentheses, what happened, and the time.
+- Keep the spoken reply short. The lookups behind it are not limited by that length.
 - Do not name tools, request ids, or JSON fields.
-- Do not tell the user to call a tool or how to investigate next. If you need another record, call the tool, then answer.
-- Do not restate the question."""
+- Do not tell the user how to investigate next.
+- Do not restate the question.
+- Times, statuses, check names, and measurement names in tool results are already operator language. Repeat them as written."""
 
 
 class _RoutedChatDatabricks(ChatDatabricks):
@@ -104,11 +110,32 @@ def _check_databricks_auth() -> None:
         ) from e
 
 
+def _operator_clause(operator: dict | None) -> str:
+    if not operator:
+        return ""
+    facilities = operator.get("facilities") or []
+    if len(facilities) == 1:
+        place = f"Their facility is {facilities[0]['name']} ({facilities[0]['id']})."
+    elif facilities:
+        listed = ", ".join(f"{item['name']} ({item['id']})" for item in facilities)
+        place = f"Their facilities are {listed}."
+    else:
+        place = "No facility id is on file."
+    return (
+        "\n\nSigned-in operator: "
+        f"{operator.get('user_name')} ({operator.get('user_id')}), "
+        f"organization {operator.get('organization_name')} ({operator.get('organization_id')}). "
+        f"{place} Do not ask for a user id, organization id, or facility id. "
+        "When they ask about the facility, call get_facility_summary and omit facility_id."
+    )
+
+
 async def create_agent_graph(
     actor: str,
     model: str | None = None,
     *,
     workspace_client_for: Callable[[str], WorkspaceClient] | None = None,
+    operator: dict | None = None,
 ):
     """Build the LangGraph agent: local tools + long-term-memory tools + any MCP tools.
 
@@ -137,7 +164,7 @@ async def create_agent_graph(
             endpoint=endpoint, workspace_client=workspace_client(), use_ai_gateway=True
         ),
         tools=tools,
-        system_prompt=SYSTEM_PROMPT,
+        system_prompt=SYSTEM_PROMPT + _operator_clause(operator),
         middleware=middleware,
         checkpointer=checkpointer(),
     )
@@ -170,6 +197,7 @@ async def run_agent(
     model: str | None = None,
     invocation_id: str | None = None,
     workspace_client_for: Callable[[str], WorkspaceClient] | None = None,
+    operator: dict | None = None,
     graph: Any = None,
 ) -> AsyncGenerator[Any, None]:
     """Run the agent and yield native LangGraph stream events.
@@ -179,7 +207,9 @@ async def run_agent(
     """
     actor = actor or session_id
     if graph is None:
-        graph = await create_agent_graph(actor, model, workspace_client_for=workspace_client_for)
+        graph = await create_agent_graph(
+            actor, model, workspace_client_for=workspace_client_for, operator=operator
+        )
     config = thread_config(session_id, actor)
     if invocation_id:
         config["metadata"] = invocation_metadata(invocation_id)

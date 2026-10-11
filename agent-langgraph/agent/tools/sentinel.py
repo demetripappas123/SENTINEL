@@ -12,6 +12,7 @@ import urllib.request
 from langchain_core.tools import tool
 
 from agent.sentinel_session import authorization
+from agent.tools.present import present
 
 
 def _omit(body: dict) -> dict:
@@ -44,7 +45,7 @@ async def _call(path: str, body: dict) -> str:
         )
     if not header.lower().startswith("bearer "):
         header = "Bearer " + header
-    return await asyncio.to_thread(_post_sync, path, body, header)
+    return present(await asyncio.to_thread(_post_sync, path, body, header))
 
 
 @tool
@@ -97,7 +98,7 @@ async def get_inspection_queue(
     severity: str | None = None,
     limit: int = 20,
 ) -> str:
-    """Return the stored operator queue, highest rank first. Use this for what needs attention. Status, when set, must be a verdict name: inspection_failure, equipment_finding, potential_anomaly, or unsupported_claim. This does not rescore the queue."""
+    """Return the stored operator queue, highest rank first. Each item includes asset_id, location_id, mission_id, and inspection_id. Those ids are joins to the asset, its history, its neighbors, the waypoint, and the action. This does not rescore the queue."""
     return await _call(
         "/internal/agent/tools/get-inspection-queue",
         {"facility_id": facility_id, "status": status, "severity": severity, "limit": limit},
@@ -138,11 +139,11 @@ async def get_rule_evaluations(inspection_id: str | None = None, event_id: str |
 
 @tool
 async def get_facility_summary(
-    facility_id: str,
+    facility_id: str | None = None,
     start_time: str | None = None,
     end_time: str | None = None,
 ) -> str:
-    """Summarize assets, the queue, and claims for a facility the signed-in organization owns."""
+    """Summarize the signed-in organization's facility. Omit facility_id. Do not ask the operator for one."""
     return await _call(
         "/internal/agent/tools/get-facility-summary",
         {"facility_id": facility_id, "start_time": start_time, "end_time": end_time},
