@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { dataset } from "@sentinel/core";
+import { getDashboardAnalytics } from "../lib/dashboard-analytics";
 import type { QueueItem } from "@sentinel/core/api";
 import { InspectionDataProvider } from "../lib/inspection-data";
 import { QueueProvider } from "../lib/queue-data";
@@ -38,6 +39,75 @@ function renderStored(ui: ReactNode) {
 }
 
 describe("dashboard workflows", () => {
+  it("shows an action's evidence when any part of its row is clicked", async () => {
+    renderStored(<MissionDetail missionId="M027" />);
+    const evidence = () =>
+      screen.getByRole("complementary", { name: "Action evidence" });
+    const rows = document.querySelectorAll("tr.action-row");
+    for (const index of [2, 6]) {
+      const cells = rows[index].querySelectorAll("td");
+      await userEvent.click(cells[4]);
+      expect(rows[index].querySelector("button")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(
+        within(evidence()).getByText("Location").nextSibling,
+      ).toHaveTextContent(cells[2].textContent!);
+    }
+  });
+  it("opens a mission from anywhere on its row, not just the name", async () => {
+    renderStored(<Missions />);
+    const link = screen.getByRole("link", { name: "Route 27" });
+    let opened = 0;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      opened++;
+    });
+    const cells = link.closest("tr")!.querySelectorAll("td");
+    await userEvent.click(cells[2]);
+    await userEvent.click(cells[4]);
+    expect(opened).toBe(2);
+    await userEvent.click(link);
+    expect(opened).toBe(3);
+  });
+  it("shows the checks recorded on a selected weekday", async () => {
+    renderStored(<Overview />);
+    const weekdays = getDashboardAnalytics(dataset, "ALL").weekdays;
+    const index = weekdays.findIndex((row) => row.count > 0);
+    const day = weekdays[index];
+    const name = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ][index];
+    const chart = screen.getByRole("group", {
+      name: "Completed checks by weekday",
+    });
+    const bar = within(chart).getByRole("button", {
+      name: `${name}: ${day.count} completed checks`,
+    });
+    await userEvent.click(bar);
+    expect(bar).toHaveAttribute("aria-pressed", "true");
+    const detail = screen.getByRole("region", { name: /checks$/ });
+    expect(within(detail).getByText("Passed").nextSibling).toHaveTextContent(
+      String(day.passed),
+    );
+    expect(within(detail).getByText("Failed").nextSibling).toHaveTextContent(
+      String(day.failed),
+    );
+    expect(within(detail).getAllByRole("listitem")).toHaveLength(
+      Math.min(day.dates.length, 4),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "All days" }));
+    expect(
+      screen.queryByRole("region", { name: /checks$/ }),
+    ).not.toBeInTheDocument();
+  });
   it("changes operational metrics when selecting V2", async () => {
     renderStored(<Overview />);
     await userEvent.click(

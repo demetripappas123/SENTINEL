@@ -120,3 +120,21 @@ it("opens and closes the future assistant without pretending it can respond", as
   );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
+
+it("picks up new results in the background without returning to loading", async () => {
+  let current = emptyDataset;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url) => Response.json(url === "/api/dataset" ? current : [])),
+  );
+  renderApp();
+  expect(await screen.findByText("No inspection data yet")).toBeInTheDocument();
+  current = dataset;
+  await act(async () => {
+    window.dispatchEvent(new Event("focus"));
+  });
+  expect(
+    await screen.findByLabelText("Operational metrics"),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("status", { name: /loading/i })).toBeNull();
+});
